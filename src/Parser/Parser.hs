@@ -1,8 +1,72 @@
 module Parser.Parser where
 
-import Parser.Tree (Tree(..))
+import           Data.Char                     (digitToInt)
+import           Numeric                       (readHex, readInt, readOct)
+import           Parser.Tree                   (Tree (..))
+import           Text.ParserCombinators.Parsec
 
 parse :: FilePath -> IO Tree
 parse fpath = do
     _ <- readFile fpath
-    return None
+    return $ Int 0
+
+zeroLit :: Parser Tree
+zeroLit = char '0' >> return (Int 0)
+
+decIntLit :: Parser Integer
+decIntLit = do
+    f <- oneOf "123456789"
+    n <- many digit
+    return (read (f : n))
+
+octLit :: Parser Tree
+octLit = do
+    _ <- char '0'
+    n <- many octDigit
+    case readOct n of
+      [] -> fail ("Could not read as oct: " ++ n)
+      (s,_) : _ -> return $ Int s
+
+hexLit :: Parser Tree
+hexLit = do
+    _ <- char '0'
+    r <- oneOf "xX"
+    n <- many hexDigit
+    case readHex n of
+      [] -> fail ("Could not read as hex: 0" ++ r:n)
+      (s,_) : _ -> return $ Int s
+
+binLit :: Parser Tree
+binLit = do
+  _ <- char '0'
+  r <- oneOf "bB"
+  n <- many1 (oneOf "01")
+  case readInt 2 (`elem` "01") digitToInt n of
+    [] -> fail ("Could not read as binary: 0" ++ r : n)
+    (s,_) : _ -> return $ Int s
+
+decFloatLit :: Parser Double
+decFloatLit = do
+    _ <- char '.'
+    ds <- many1 digit
+    return $ read $ '0':'.':ds
+decExpLit :: Parser Integer
+decExpLit = do
+    _ <- oneOf "eE"
+    s <- option 1 (char '-' >> return (-1))
+    ds <- many1 digit
+    return $ s * read ds
+
+decLit :: Parser Tree
+decLit = do
+    d <- decIntLit
+    f <- optionMaybe decFloatLit
+    e <- optionMaybe decExpLit
+    return $ case (f,e) of
+      (Nothing, Nothing) -> Int $ fromInteger d
+      (Just f1, Nothing) -> Real $ fromInteger d + f1
+      (Nothing, Just e1) -> Int $ fromInteger (d ^ e1)
+      (Just f1, Just e1) -> Real $ (fromInteger d + f1) ** fromInteger e1
+
+numLit :: Parser Tree
+numLit = choice [decLit, octLit, hexLit, binLit, zeroLit]

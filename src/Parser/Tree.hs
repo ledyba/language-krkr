@@ -1,3 +1,5 @@
 module Parser.Tree where
 
-data Tree = None
+data Tree =
+   Int Integer
+  | Real Double
