@@ -1,7 +1,7 @@
 module ParserSpec where
 
 import Test.Hspec
-import Parser.Parser
+import Parser.Parser (parse)
 
 spec :: Spec
 spec = do
