@@ -1,14 +1,13 @@
-module Parser.Parser where
+module Parser.Parser (parse) where
 
 import           Data.Char                     (digitToInt)
 import           Numeric                       (readHex, readInt, readOct)
 import           Parser.Tree                   (Tree (..))
-import           Text.ParserCombinators.Parsec
+import           Text.ParserCombinators.Parsec hiding (parse)
+import qualified Text.ParserCombinators.Parsec as P
 
-parse :: FilePath -> IO Tree
-parse fpath = do
-    _ <- readFile fpath
-    return $ Int 0
+parse :: String -> Either ParseError Tree
+parse = P.parse numLit "<TEXT>"
 
 zeroLit :: Parser Tree
 zeroLit = char '0' >> return (Int 0)
@@ -65,8 +64,8 @@ decLit = do
     return $ case (f,e) of
       (Nothing, Nothing) -> Int $ fromInteger d
       (Just f1, Nothing) -> Real $ fromInteger d + f1
-      (Nothing, Just e1) -> Int $ fromInteger (d ^ e1)
-      (Just f1, Just e1) -> Real $ (fromInteger d + f1) ** fromInteger e1
+      (Nothing, Just e1) -> Int $ fromInteger (d * (10 ^ e1))
+      (Just f1, Just e1) -> Real $ (fromInteger d + f1) * fromInteger (10 ^ e1)
 
 numLit :: Parser Tree
 numLit = choice [decLit, octLit, hexLit, binLit, zeroLit]

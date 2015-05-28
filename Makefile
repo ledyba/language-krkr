@@ -8,7 +8,6 @@ run:
 	cabal run
 
 test:
-	cabal install --enable-tests
 	cabal test
 
 conf:
