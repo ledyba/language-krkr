@@ -1,5 +1,5 @@
 module Parser.Tree where
 
 data Tree =
-   Int Integer
+    Int Integer
   | Real Double

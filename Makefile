@@ -1,4 +1,4 @@
-.PHONY: init all run conf
+.PHONY: init all run test conf
 
 init:
 	cabal sandbox init
@@ -10,5 +10,9 @@ all:
 run:
 	cabal run
 
+test:
+	cabal test
+
 conf:
+	cabal install --only-dependencies
 	cabal configure
