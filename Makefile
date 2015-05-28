@@ -14,5 +14,5 @@ test:
 	cabal test
 
 conf:
-	cabal install --only-dependencies
-	cabal configure
+	cabal install --only-dependencies --enable-tests
+	cabal configure --enable-tests
