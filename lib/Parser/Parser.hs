@@ -5,6 +5,7 @@ import           Numeric                       (readHex, readInt, readOct)
 import           Parser.Tree                   (Tree (..),Identifer(..),Expr(..))
 import           Text.ParserCombinators.Parsec hiding (parse)
 import qualified Text.ParserCombinators.Parsec as P
+import Control.Applicative ((<$>))
 
 parse :: String -> Either ParseError Tree
 parse = P.parse source "<TEXT>"
@@ -12,13 +13,13 @@ parse = P.parse source "<TEXT>"
 source :: Parser Tree
 source = do
     spaces
-    src <- element
+    src <- Expr <$> expr
     spaces
     _ <- eof
-    return $ Expr src
+    return src
 
-element :: Parser Expr
-element = choice [numLit, strLit, identifer]
+expr :: Parser Expr
+expr = choice [numLit, strLit, identifer]
 
 identifer :: Parser Expr
 identifer = do
