@@ -18,13 +18,13 @@ instance Eq ParseError where
 spec :: Spec
 spec = do
   describe "num literal test" $ do
-    it "Parse Dec Int" $ parse "123" `shouldBe` Right (Int 123)
-    it "Parse Dec Int" $ parse "123e2" `shouldBe` Right (Int 12300)
-    it "Parse Dec Int" $ parse "123.0e2" `shouldBe` Right (Real 12300.0)
+    it "Parse Dec Int" $ parse "123" `shouldBe` Right (Expr $ Int 123)
+    it "Parse Dec Int" $ parse "123e2" `shouldBe` Right (Expr $ Int 12300)
+    it "Parse Dec Int" $ parse "123.0e2" `shouldBe` Right (Expr $ Real 12300.0)
   describe "str literal test" $ do
-    it "Parse Single Str" $ parse "'anata to java'" `shouldBe` Right (Str "anata to java")
-    it "Parse Double Str" $ parse "\"anata to java\"" `shouldBe` Right (Str "anata to java")
+    it "Parse Single Str" $ parse "'anata to java'" `shouldBe` Right (Expr $ Str "anata to java")
+    it "Parse Double Str" $ parse "\"anata to java\"" `shouldBe` Right (Expr $ Str "anata to java")
   describe "identifer test" $ do
-    it "Parse Identifer" $ parse "abc123" `shouldBe` Right (Ident "abc123")
-    it "Parse Identifer" $ parse "__abc123__" `shouldBe` Right (Ident "__abc123__")
+    it "Parse Identifer" $ parse "abc123" `shouldBe` Right (Expr $ Ident $ Identifer "abc123")
+    it "Parse Identifer" $ parse "__abc123__" `shouldBe` Right (Expr $ Ident $ Identifer "__abc123__")
     it "Parse Identifer" $ parse "1__abc123__" `shouldSatisfy` isLeft

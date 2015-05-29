@@ -2,7 +2,7 @@ module Parser.Parser (parse) where
 
 import           Data.Char                     (digitToInt,chr)
 import           Numeric                       (readHex, readInt, readOct)
-import           Parser.Tree                   (Tree (..))
+import           Parser.Tree                   (Tree (..),Identifer(..),Expr(..))
 import           Text.ParserCombinators.Parsec hiding (parse)
 import qualified Text.ParserCombinators.Parsec as P
 
@@ -15,16 +15,16 @@ source = do
     src <- element
     spaces
     _ <- eof
-    return src
+    return $ Expr src
 
-element :: Parser Tree
+element :: Parser Expr
 element = choice [numLit, strLit, identifer]
 
-identifer :: Parser Tree
+identifer :: Parser Expr
 identifer = do
     f <- choice [letter, char '_']
     n <- many $ choice [alphaNum, char '_']
-    return $ Ident (f:n)
+    return $ Ident $ Identifer (f:n)
 
 uniLit :: Parser Char
 uniLit = do
@@ -76,7 +76,7 @@ doubleStringLit = do
     _ <- char '\"'
     return str
 
-zeroLit :: Parser Tree
+zeroLit :: Parser Expr
 zeroLit = char '0' >> return (Int 0)
 
 decIntLit :: Parser Integer
@@ -85,7 +85,7 @@ decIntLit = do
     n <- many digit
     return (read (f : n))
 
-octLit :: Parser Tree
+octLit :: Parser Expr
 octLit = do
     _ <- char '0'
     n <- many octDigit
@@ -93,7 +93,7 @@ octLit = do
       [] -> fail ("Could not read as oct: " ++ n)
       (s,_) : _ -> return $ Int s
 
-hexLit :: Parser Tree
+hexLit :: Parser Expr
 hexLit = do
     _ <- char '0'
     r <- oneOf "xX"
@@ -102,14 +102,14 @@ hexLit = do
       [] -> fail ("Could not read as hex: 0" ++ r:n)
       (s,_) : _ -> return $ Int s
 
-binLit :: Parser Tree
+binLit :: Parser Expr
 binLit = do
   _ <- char '0'
   r <- oneOf "bB"
   n <- many1 (oneOf "01")
   case readInt 2 (`elem` "01") digitToInt n of
     [] -> fail ("Could not read as binary: 0" ++ r : n)
-    (s,_) : _ -> return $ Int s
+    (s,_) : _ -> return (Int s)
 
 decFloatLit :: Parser Double
 decFloatLit = do
@@ -123,7 +123,7 @@ decExpLit = do
     ds <- many1 digit
     return $ s * read ds
 
-decLit :: Parser Tree
+decLit :: Parser Expr
 decLit = do
     d <- decIntLit
     f <- optionMaybe decFloatLit
@@ -134,8 +134,8 @@ decLit = do
       (Nothing, Just e1) -> Int $ fromInteger (d * (10 ^ e1))
       (Just f1, Just e1) -> Real $ (fromInteger d + f1) * fromInteger (10 ^ e1)
 
-numLit :: Parser Tree
+numLit :: Parser Expr
 numLit = choice [decLit, octLit, hexLit, binLit, zeroLit]
 
-strLit :: Parser Tree
+strLit :: Parser Expr
 strLit = fmap Str (choice [singleStringLit, doubleStringLit])
