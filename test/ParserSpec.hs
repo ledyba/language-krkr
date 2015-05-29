@@ -7,6 +7,11 @@ import Parser.Tree
 import           Text.ParserCombinators.Parsec hiding (parse)
 import Text.ParserCombinators.Parsec.Error(errorMessages)
 
+isLeft :: Either a b -> Bool
+isLeft  = either (const True) (const False)
+isRight :: Either a b -> Bool
+isRight = either (const False) (const True)
+
 instance Eq ParseError where
     a == b = errorMessages a == errorMessages b
 
@@ -19,3 +24,7 @@ spec = do
   describe "str literal test" $ do
     it "Parse Single Str" $ parse "'anata to java'" `shouldBe` Right (Str "anata to java")
     it "Parse Double Str" $ parse "\"anata to java\"" `shouldBe` Right (Str "anata to java")
+  describe "identifer test" $ do
+    it "Parse Identifer" $ parse "abc123" `shouldBe` Right (Ident "abc123")
+    it "Parse Identifer" $ parse "__abc123__" `shouldBe` Right (Ident "__abc123__")
+    it "Parse Identifer" $ parse "1__abc123__" `shouldSatisfy` isLeft

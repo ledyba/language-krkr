@@ -10,7 +10,21 @@ parse :: String -> Either ParseError Tree
 parse = P.parse source "<TEXT>"
 
 source :: Parser Tree
-source = choice [numLit, strLit]
+source = do
+    spaces
+    src <- element
+    spaces
+    _ <- eof
+    return src
+
+element :: Parser Tree
+element = choice [numLit, strLit, identifer]
+
+identifer :: Parser Tree
+identifer = do
+    f <- choice [letter, char '_']
+    n <- many $ choice [alphaNum, char '_']
+    return $ Ident (f:n)
 
 uniLit :: Parser Char
 uniLit = do
