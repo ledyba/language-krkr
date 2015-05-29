@@ -1,13 +1,66 @@
 module Parser.Parser (parse) where
 
-import           Data.Char                     (digitToInt)
+import           Data.Char                     (digitToInt,chr)
 import           Numeric                       (readHex, readInt, readOct)
 import           Parser.Tree                   (Tree (..))
 import           Text.ParserCombinators.Parsec hiding (parse)
 import qualified Text.ParserCombinators.Parsec as P
 
 parse :: String -> Either ParseError Tree
-parse = P.parse numLit "<TEXT>"
+parse = P.parse source "<TEXT>"
+
+source :: Parser Tree
+source = choice [numLit, strLit]
+
+uniLit :: Parser Char
+uniLit = do
+    str <- many1 hexDigit
+    case readHex str of
+      [] -> fail ("Could not read as hex: 0x" ++ str)
+      (s,_) : _ -> return $ chr s
+
+singleStringLitEsc :: Parser Char
+singleStringLitEsc = char '\\' >> choice
+            [ char '\\' >> return '\\',
+             char '\'' >> return '\'',
+             char 'a' >> return (chr 0x7),
+             char 'b' >> return (chr 0x8),
+             char 'f' >> return (chr 0xc),
+             char 'n' >> return '\n',
+             char 'r' >> return '\r',
+             char 't' >> return '\t',
+             char 'v' >> return (chr 0xb),
+             oneOf "xX" >> uniLit
+            ]
+
+singleStringLit :: Parser String
+singleStringLit = do
+    _ <- char '\''
+    str <- many $ choice [singleStringLitEsc, P.noneOf "\'"]
+    _ <- char '\''
+    return str
+
+
+doubleStringLitEsc :: Parser Char
+doubleStringLitEsc = char '\\' >> choice
+            [ char '\\' >> return '\\',
+             char '\"' >> return '"',
+             char 'a' >> return (chr 0x7),
+             char 'b' >> return (chr 0x8),
+             char 'f' >> return (chr 0xc),
+             char 'n' >> return '\n',
+             char 'r' >> return '\r',
+             char 't' >> return '\t',
+             char 'v' >> return (chr 0xb),
+             oneOf "xX" >> uniLit
+            ]
+
+doubleStringLit :: Parser String
+doubleStringLit = do
+    _ <- char '\"'
+    str <- many $ choice [doubleStringLitEsc, P.noneOf "\""]
+    _ <- char '\"'
+    return str
 
 zeroLit :: Parser Tree
 zeroLit = char '0' >> return (Int 0)
@@ -69,3 +122,6 @@ decLit = do
 
 numLit :: Parser Tree
 numLit = choice [decLit, octLit, hexLit, binLit, zeroLit]
+
+strLit :: Parser Tree
+strLit = fmap Str (choice [singleStringLit, doubleStringLit])
