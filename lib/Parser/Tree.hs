@@ -13,6 +13,7 @@ data Expr =
     | Str String
     | Ident Identifer
     | Null
+    | WithThis
   deriving (Show, Eq)
 
 data Tree =

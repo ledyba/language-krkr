@@ -1,11 +1,12 @@
 module Parser.Parser (parse) where
 
-import           Data.Char                     (digitToInt,chr)
+import           Control.Applicative           ((<$>))
+import           Data.Char                     (chr, digitToInt)
 import           Numeric                       (readHex, readInt, readOct)
-import           Parser.Tree                   (Tree (..),Identifer(..),Expr(..))
+import           Parser.Tree                   (Expr (..), Identifer (..),
+                                                Tree (..))
 import           Text.ParserCombinators.Parsec hiding (parse)
 import qualified Text.ParserCombinators.Parsec as P
-import Control.Applicative ((<$>))
 
 parse :: String -> Either ParseError Tree
 parse = P.parse source "<TEXT>"
@@ -15,11 +16,34 @@ source = do
     spaces
     src <- Expr <$> expr
     spaces
-    _ <- eof
+    eof
     return src
 
 expr :: Parser Expr
 expr = choice [numLit, strLit, identifer]
+
+--------------------------------------------------------------------------------
+-- Terms
+--------------------------------------------------------------------------------
+
+comment :: Parser ()
+comment = (many $ choice [space]) >> return ()
+
+term :: Parser Expr
+term = choice
+    [numLit
+    ,strLit
+    ,Bin "." WithThis <$> (char '.' >> optional comment >> identifer)
+    ,do
+      char '('
+      e <- expr
+      char ')'
+      return e
+    ]
+
+--------------------------------------------------------------------------------
+-- Literals
+--------------------------------------------------------------------------------
 
 identifer :: Parser Expr
 identifer = do
@@ -50,9 +74,9 @@ singleStringLitEsc = char '\\' >> choice
 
 singleStringLit :: Parser String
 singleStringLit = do
-    _ <- char '\''
+    char '\''
     str <- many $ choice [singleStringLitEsc, P.noneOf "\'"]
-    _ <- char '\''
+    char '\''
     return str
 
 
@@ -72,9 +96,9 @@ doubleStringLitEsc = char '\\' >> choice
 
 doubleStringLit :: Parser String
 doubleStringLit = do
-    _ <- char '\"'
+    char '\"'
     str <- many $ choice [doubleStringLitEsc, P.noneOf "\""]
-    _ <- char '\"'
+    char '\"'
     return str
 
 zeroLit :: Parser Expr
@@ -88,7 +112,7 @@ decIntLit = do
 
 octLit :: Parser Expr
 octLit = do
-    _ <- char '0'
+    char '0'
     n <- many octDigit
     case readOct n of
       [] -> fail ("Could not read as oct: " ++ n)
@@ -96,7 +120,7 @@ octLit = do
 
 hexLit :: Parser Expr
 hexLit = do
-    _ <- char '0'
+    char '0'
     r <- oneOf "xX"
     n <- many hexDigit
     case readHex n of
@@ -105,7 +129,7 @@ hexLit = do
 
 binLit :: Parser Expr
 binLit = do
-  _ <- char '0'
+  char '0'
   r <- oneOf "bB"
   n <- many1 (oneOf "01")
   case readInt 2 (`elem` "01") digitToInt n of
@@ -114,12 +138,12 @@ binLit = do
 
 decFloatLit :: Parser Double
 decFloatLit = do
-    _ <- char '.'
+    char '.'
     ds <- many1 digit
     return $ read $ '0':'.':ds
 decExpLit :: Parser Integer
 decExpLit = do
-    _ <- oneOf "eE"
+    oneOf "eE"
     s <- option 1 (char '-' >> return (-1))
     ds <- many1 digit
     return $ s * read ds
@@ -139,4 +163,4 @@ numLit :: Parser Expr
 numLit = choice [decLit, octLit, hexLit, binLit, zeroLit]
 
 strLit :: Parser Expr
-strLit = fmap Str (choice [singleStringLit, doubleStringLit])
+strLit = Str <$> choice [singleStringLit, doubleStringLit]
