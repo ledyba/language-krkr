@@ -34,6 +34,8 @@ term = choice
     [numLit
     ,strLit
     ,Bin "." WithThis <$> (char '.' >> optional comment >> identifer)
+    ,arrayLit
+    ,dictLit
     ,do
       char '('
       e <- expr
@@ -50,6 +52,27 @@ identifer = do
     f <- choice [letter, char '_']
     n <- many $ choice [alphaNum, char '_']
     return $ Ident $ Identifer (f:n)
+
+arrayLit :: Parser Expr
+arrayLit = do
+  _ <- char '['
+  lits <- expr `sepEndBy` char ','
+  _ <- char ']'
+  return $ Array lits
+
+dictItem :: Parser (String, Expr)
+dictItem = do
+  key <- stringLit
+  _ <- string "=>"
+  value <- expr
+  return expr
+
+dictLit :: Parser Expr
+dictLit = do
+  _ <- string "%["
+  lits <- dictItem `sepEndBy` char ','
+  _ <- char ']'
+  return $ Dict lits
 
 uniLit :: Parser Char
 uniLit = do
@@ -100,6 +123,9 @@ doubleStringLit = do
     str <- many $ choice [doubleStringLitEsc, P.noneOf "\""]
     char '\"'
     return str
+
+stringLit :: Parser String
+stringLit = choice[doubleStringLit, singleStringLit]
 
 zeroLit :: Parser Expr
 zeroLit = char '0' >> return (Int 0)
