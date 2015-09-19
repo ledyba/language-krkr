@@ -18,10 +18,12 @@ spec :: Spec
 spec = do
   describe "num literal test" $ do
     it "Parse Dec Int" $ parse "123" `shouldBe` Right (Expr $ Int 123)
+    it "Parse Dec Int With Comment" $ parse "123 //here is the comment" `shouldBe` Right (Expr $ Int 123)
     it "Parse Dec Int" $ parse "123e2" `shouldBe` Right (Expr $ Int 12300)
     it "Parse Dec Int" $ parse "123.0e2" `shouldBe` Right (Expr $ Real 12300.0)
   describe "str literal test" $ do
-    it "Parse Single Str" $ parse "'anata to java' /* test */" `shouldBe` Right (Expr $ Str "anata to java")
+    it "Parse Single Str" $ parse "'anata to java'" `shouldBe` Right (Expr $ Str "anata to java")
+    it "Parse Single Str With Comment" $ parse "'anata to java' /* test */" `shouldBe` Right (Expr $ Str "anata to java")
     it "Parse Double Str" $ parse "\"anata to java\"" `shouldBe` Right (Expr $ Str "anata to java")
     it "Parse Double Str" $ parse "\"anata \\\"to java\"" `shouldBe` Right (Expr $ Str "anata \"to java")
     it "Parse Double Str" $ parse "\"anata 'to java\"" `shouldBe` Right (Expr $ Str "anata 'to java")

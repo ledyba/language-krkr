@@ -37,7 +37,7 @@ comment = do
   where
     oneline = do
       try $ void $ string "//"
-      void $ manyTill anyChar (try newline)
+      void $ manyTill anyChar (try $ choice [void newline, eof])
       return ()
     multline = do
       try $ void $ string "/*"
