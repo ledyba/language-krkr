@@ -16,4 +16,4 @@ conf:
 
 init:
 	cabal sandbox init
-	cabal install --only-dependencies
+	cabal install --only-dependencies --enable-tests

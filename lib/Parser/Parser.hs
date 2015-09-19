@@ -8,14 +8,17 @@ import           Parser.Tree                   (Expr (..), Identifer (..),
 import           Text.ParserCombinators.Parsec hiding (parse)
 import qualified Text.ParserCombinators.Parsec as P
 
+void :: Monad m => m a -> m ()
+void f = f >> return ()
+
 parse :: String -> Either ParseError Tree
 parse = P.parse source "<TEXT>"
 
 source :: Parser Tree
 source = do
-    spaces
+    tjspace
     src <- Expr <$> expr
-    spaces
+    tjspace
     eof
     return src
 
@@ -27,25 +30,44 @@ expr = choice [numLit, strLit, identifer]
 --------------------------------------------------------------------------------
 
 comment :: Parser ()
-comment = (many $ choice [space]) >> return ()
+comment = do
+    spaces
+    choice [oneline, multline]
+    spaces
+  where
+    oneline = do
+      try $ void $ string "//"
+      void $ manyTill anyChar (try newline)
+      return ()
+    multline = do
+      try $ void $ string "/*"
+      void $ manyTill anyChar (try (string "*/"))
+      return ()
 
 term :: Parser Expr
-term = choice
+term = do
+  tjspace
+  r <- choice
     [numLit
     ,strLit
-    ,Bin "." WithThis <$> (char '.' >> optional comment >> identifer)
+    ,Bin "." WithThis <$> (char '.' >> tjspace >> identifer)
     ,arrayLit
     ,dictLit
     ,do
-      char '('
+      void $ char '('
       e <- expr
-      char ')'
+      void $ char ')'
       return e
     ]
+  tjspace
+  return r
 
 --------------------------------------------------------------------------------
 -- Literals
 --------------------------------------------------------------------------------
+
+tjspace :: Parser ()
+tjspace = optional $ skipMany1 $ choice [void space, comment]
 
 identifer :: Parser Expr
 identifer = do
@@ -55,23 +77,23 @@ identifer = do
 
 arrayLit :: Parser Expr
 arrayLit = do
-  _ <- char '['
+  void $ char '['
   lits <- expr `sepEndBy` char ','
-  _ <- char ']'
+  void $ char ']'
   return $ Array lits
 
 dictItem :: Parser (String, Expr)
 dictItem = do
   key <- stringLit
-  _ <- string "=>"
+  void $ string "=>"
   value <- expr
-  return expr
+  return (key, value)
 
 dictLit :: Parser Expr
 dictLit = do
-  _ <- string "%["
+  void $ string "%["
   lits <- dictItem `sepEndBy` char ','
-  _ <- char ']'
+  void $ char ']'
   return $ Dict lits
 
 uniLit :: Parser Char
@@ -97,9 +119,9 @@ singleStringLitEsc = char '\\' >> choice
 
 singleStringLit :: Parser String
 singleStringLit = do
-    char '\''
+    void $ char '\''
     str <- many $ choice [singleStringLitEsc, P.noneOf "\'"]
-    char '\''
+    void $ char '\''
     return str
 
 
@@ -119,13 +141,13 @@ doubleStringLitEsc = char '\\' >> choice
 
 doubleStringLit :: Parser String
 doubleStringLit = do
-    char '\"'
+    void $ char '\"'
     str <- many $ choice [doubleStringLitEsc, P.noneOf "\""]
-    char '\"'
+    void $ char '\"'
     return str
 
 stringLit :: Parser String
-stringLit = choice[doubleStringLit, singleStringLit]
+stringLit = choice [doubleStringLit, singleStringLit]
 
 zeroLit :: Parser Expr
 zeroLit = char '0' >> return (Int 0)
@@ -138,7 +160,7 @@ decIntLit = do
 
 octLit :: Parser Expr
 octLit = do
-    char '0'
+    void $ char '0'
     n <- many octDigit
     case readOct n of
       [] -> fail ("Could not read as oct: " ++ n)
@@ -146,7 +168,7 @@ octLit = do
 
 hexLit :: Parser Expr
 hexLit = do
-    char '0'
+    void $ char '0'
     r <- oneOf "xX"
     n <- many hexDigit
     case readHex n of
@@ -155,7 +177,7 @@ hexLit = do
 
 binLit :: Parser Expr
 binLit = do
-  char '0'
+  void $ char '0'
   r <- oneOf "bB"
   n <- many1 (oneOf "01")
   case readInt 2 (`elem` "01") digitToInt n of
@@ -164,12 +186,13 @@ binLit = do
 
 decFloatLit :: Parser Double
 decFloatLit = do
-    char '.'
+    void $ char '.'
     ds <- many1 digit
     return $ read $ '0':'.':ds
+
 decExpLit :: Parser Integer
 decExpLit = do
-    oneOf "eE"
+    void $ oneOf "eE"
     s <- option 1 (char '-' >> return (-1))
     ds <- many1 digit
     return $ s * read ds
