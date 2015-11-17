@@ -29,7 +29,15 @@ source = do
 --------------------------------------------------------------------------------
 
 expr :: Parser Expr
-expr = postOp
+expr = preOp
+
+preOp :: Parser Expr
+preOp = do
+          mop <- optionMaybe $ choice $ fmap string ["!","~","--","++","new","invalidate","delete", "typeof", "#", "$", "+", "-", "&", "*"]
+          tjspace
+          case mop of
+            Nothing -> postOp
+            Just op -> preOp >>= \e -> return (PreUni op e)
 
 postOp :: Parser Expr
 postOp = do
