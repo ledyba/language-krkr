@@ -36,3 +36,9 @@ spec = do
     it "Parse Identifer" $ parse "abc123" `shouldBe` Right (Expr $ Ident $ Identifer "abc123")
     it "Parse Identifer" $ parse "__abc123__" `shouldBe` Right (Expr $ Ident $ Identifer "__abc123__")
     it "Parse Identifer" $ parse "1__abc123__" `shouldSatisfy` isLeft
+
+  describe "postop" $ do
+    it "Parse Identifer" $ parse "a[123]" `shouldBe` Right (Expr (Index (Ident (Identifer "a")) (Int 123)))
+    it "Parse Identifer" $ parse "a[123].test" `shouldBe` Right (Expr (Dot (Index (Ident (Identifer "a")) (Int 123)) (Identifer "test")))
+    it "Parse Identifer" $ parse "a[123]++--!" `shouldBe` Right (Expr (PostUni (PostUni (PostUni (Index (Ident (Identifer "a")) (Int 123)) "++") "--") "!"))
+    it "Parse Identifer" $ parse "a[123].test++--!" `shouldBe` Right (Expr (PostUni (PostUni (PostUni (Dot (Index (Ident (Identifer "a")) (Int 123)) (Identifer "test")) "++") "--") "!"))
