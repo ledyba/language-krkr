@@ -4,7 +4,7 @@ import           Control.Applicative           ((<$>))
 import           Data.Char                     (chr, digitToInt)
 import           Numeric                       (readHex, readInt, readOct)
 import           Parser.Tree                   (Expr (..), Identifer (..),
-                                                Tree (..))
+                                                Tree (..), ApplyArg(..))
 import           Text.ParserCombinators.Parsec hiding (parse)
 import qualified Text.ParserCombinators.Parsec as P
 
@@ -22,12 +22,58 @@ source = do
     eof
     return src
 
-expr :: Parser Expr
-expr = choice [numLit, strLit, identifer]
+--expr = choice [numLit, strLit, identifer]
 
 --------------------------------------------------------------------------------
 -- Terms
 --------------------------------------------------------------------------------
+
+expr :: Parser Expr
+expr = postOp
+
+postOp :: Parser Expr
+postOp = do
+    t0 <- term
+    t1 <- rep t0
+    repop t1
+  where
+    repop :: Expr -> Parser Expr
+    repop expr0 = try (tjspace >> applyop expr0 >>= \expr1 -> repop expr1) <|> return expr0
+    applyop :: Expr -> Parser Expr
+    applyop expr0 = do
+      op <- choice [string "++", string "--", string "!", string "isvalid"]
+      return (PostUni expr0 op)
+    rep :: Expr -> Parser Expr
+    rep expr0 = try (tjspace >> apply expr0 >>= \expr1 -> rep expr1) <|> return expr0
+    apply :: Expr -> Parser Expr
+    apply expr0 =
+        choice [
+          do
+            void $ char '['
+            tjspace
+            expr1 <- expr
+            tjspace
+            void $ char ']'
+            return (Index expr0 expr1)
+          ,do
+            void $ char '('
+            tjspace
+            exprs <- applyArg `sepBy` (tjspace >> char ',' >> tjspace)
+            tjspace
+            void $ char ')'
+            return (Call expr0 exprs)
+          ,do
+            void $ char '.'
+            tjspace
+            name <- identifer
+            return (Dot expr0 name)
+        ]
+        where
+          applyArg = leftApply <|> exprApply
+          leftApply = (void (char '*') <|> void(string "...")) >> return ApplyLeft
+          exprApply = do
+            e <- expr
+            (void (char '*') >> return (ApplyArray e)) <|>  return (ApplyExpr e)
 
 term :: Parser Expr
 term = do
@@ -35,14 +81,15 @@ term = do
   r <- choice
     [numLit
     ,strLit
-    ,Bin "." WithThis <$> (char '.' >> tjspace >> identifer)
-    ,arrayLit
+    ,Dot WithThis <$> (char '.' >> tjspace >> identifer)
     ,dictLit
+    ,arrayLit
     ,do
       void $ char '('
       e <- expr
       void $ char ')'
       return e
+    ,fmap Ident identifer
     ]
   tjspace
   return r
@@ -51,11 +98,11 @@ term = do
 -- Literals
 --------------------------------------------------------------------------------
 
-identifer :: Parser Expr
+identifer :: Parser Identifer
 identifer = do
     f <- choice [letter, char '_']
     n <- many $ choice [alphaNum, char '_']
-    return $ Ident $ Identifer (f:n)
+    return $ Identifer (f:n)
 
 arrayLit :: Parser Expr
 arrayLit = do
@@ -94,16 +141,10 @@ uniLit = do
 zeroLit :: Parser Expr
 zeroLit = char '0' >> return (Int 0)
 
-decIntLit :: Parser Integer
-decIntLit = do
-    f <- oneOf "123456789"
-    n <- many digit
-    return (read (f : n))
-
 octLit :: Parser Expr
 octLit = do
     void $ char '0'
-    n <- many octDigit
+    n <- many1 octDigit
     case readOct n of
       [] -> fail ("Could not read as oct: " ++ n)
       (s,_) : _ -> return $ Int s
@@ -112,7 +153,7 @@ hexLit :: Parser Expr
 hexLit = do
     void $ char '0'
     r <- oneOf "xX"
-    n <- many hexDigit
+    n <- many1 hexDigit
     case readHex n of
       [] -> fail ("Could not read as hex: 0" ++ r:n)
       (s,_) : _ -> return $ Int s
@@ -137,6 +178,12 @@ decLit = do
       (Nothing, Just e1) -> Int $ fromInteger (d * (10 ^ e1))
       (Just f1, Just e1) -> Real $ (fromInteger d + f1) * fromInteger (10 ^ e1)
     where
+      decIntLit :: Parser Integer
+      decIntLit = do
+          f <- oneOf "123456789"
+          n <- many digit
+          return (read (f : n))
+
       decFloatLit :: Parser Double
       decFloatLit = do
           void $ char '.'
@@ -151,7 +198,7 @@ decLit = do
           return $ s * read ds
 
 numLit :: Parser Expr
-numLit = choice [decLit, octLit, hexLit, binLit, zeroLit]
+numLit = choice [try decLit, try octLit, try hexLit, try binLit, zeroLit]
 
 strLit :: Parser Expr
 strLit = Str <$> stringLit

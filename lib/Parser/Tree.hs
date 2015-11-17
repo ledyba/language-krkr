@@ -1,11 +1,11 @@
-module Parser.Tree (Tree(..),Expr(..),Identifer(..)) where
+module Parser.Tree (Tree(..),Expr(..),Identifer(..),ApplyArg(..)) where
 
 newtype Identifer = Identifer String deriving (Show, Eq)
 
 data Expr =
       Bin String Expr Expr
     | PreUni String Expr
-    | PostUni String Expr
+    | PostUni Expr String
     | Tri Expr Expr Expr
     | Cast Identifer Expr
     | Int Integer
@@ -14,8 +14,17 @@ data Expr =
     | Ident Identifer
     | Array [Expr]
     | Dict [(String, Expr)]
+    | Index Expr Expr
+    | Call Expr [ApplyArg]
+    | Dot Expr Identifer
     | Null
     | WithThis
+  deriving (Show, Eq)
+
+data ApplyArg =
+    ApplyLeft
+  | ApplyArray Expr
+  | ApplyExpr Expr
   deriving (Show, Eq)
 
 data Tree =
