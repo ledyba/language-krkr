@@ -1,4 +1,4 @@
-module Parser.Parser (parse) where
+module Parser.Parser (parse,parse2) where
 
 import           Data.Char                     (chr, digitToInt)
 import           Numeric                       (readHex, readInt, readOct)
@@ -16,6 +16,9 @@ void f = f >> return ()
 
 parse :: FilePath -> String -> Either ParseError Stmt
 parse = P.parse source
+
+parse2 :: FilePath -> String -> Either ParseError Stmt
+parse2 = P.parse switchStmt
 
 source :: Parser Stmt
 source = do
@@ -56,37 +59,25 @@ breakStmt = string "break" >> tjspace >> char ';' >> return Break
 
 switchStmt :: Parser Stmt
 switchStmt = do
-    void (string "switch")
-    tjspace
-    void (char '(')
-    tjspace
+    void (string "switch" >> tjspace >> char '(')
     econd <- expr
-    tjspace
-    void (char ')')
-    tjspace
-    void (char '{')
-    tjspace
-    cases <- many switchCase
-    tjspace
+    void (tjspace >> char ')' >> tjspace >> char '{' >> tjspace)
+    cases <- try switchCase `sepEndBy` tjspace
     def <- optionMaybe (try switchDefault)
-    tjspace
-    void (char '}')
+    void (tjspace >> char '}')
     return (Switch econd cases def)
   where
     switchCase :: Parser (Expr, [Stmt])
     switchCase = do
-      void (string "case")
-      tjspace
+      try $ void (string "case" >> tjspace)
       caseCond <- expr
-      void (tjspace >> char ':')
-      caseStmt <- choice [try breakStmt, stmt] `sepEndBy` tjspace
+      void (tjspace >> char ':' >> tjspace)
+      caseStmt <- try (choice [try breakStmt, try stmt]) `sepEndBy` tjspace
       return (caseCond, caseStmt)
     switchDefault :: Parser [Stmt]
     switchDefault = do
-      void (string "default" >> tjspace >> char ':')
-      caseStmt <- choice [try breakStmt, stmt] `sepEndBy` tjspace
-      tjspace
-      return caseStmt
+      try $ void (string "default" >> tjspace >> char ':' >> tjspace)
+      try (choice [try breakStmt, try stmt]) `sepEndBy` tjspace
 
 whileStmt :: Parser Stmt
 whileStmt = do
