@@ -75,4 +75,4 @@ spec = do
       parse "while (1) x;" `shouldBe` Right (While (Int 1) (Exec (Ident (Identifer "x"))))
     it "Parse Switch" $ do
       parse "switch (1) {case 1: x; case 2: y;}" `shouldBe` Right (Switch (Int 1) [(Int 1, [Exec (Ident (Identifer "x"))]), (Int 2, [Exec (Ident (Identifer "y"))])] Nothing)
-      (P.parse2 "<TEST>") "switch (1) {case 1: x; case 2: y; default: z;}" `shouldBe` Right (Switch (Int 1) [(Int 1, [Exec (Ident (Identifer "x"))]), (Int 2, [Exec (Ident (Identifer "y"))])] (Just [Exec (Ident (Identifer "z"))]))
+      parse "switch (1) {case 1: x; case 2: y; default: z; k;}" `shouldBe` Right (Switch (Int 1) [(Int 1, [Exec (Ident (Identifer "x"))]), (Int 2, [Exec (Ident (Identifer "y"))])] (Just [Exec (Ident (Identifer "z")),Exec (Ident (Identifer "k"))]))
