@@ -34,6 +34,7 @@ stmt = choice
           [try ifStmt
           ,try switchStmt
           ,try whileStmt
+          ,try tryStmt
           ,execStmt]
 
 --------------------------------------------------------------------------------
@@ -98,6 +99,16 @@ execStmt = do
   tjspace
   void (char ';')
   return (Exec e)
+
+tryStmt :: Parser Stmt
+tryStmt = do
+    void (string "try" >> tjspace)
+    stmt0 <- stmt
+    void (tjspace >> string "catch" >> tjspace >> char '(' >> tjspace)
+    name <- identifer
+    void (tjspace >> char ')' >> tjspace)
+    stmt1 <- stmt
+    return (Try stmt0 name stmt1)
 
 --------------------------------------------------------------------------------
 -- Expr + Term

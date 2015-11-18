@@ -8,7 +8,7 @@ data Stmt =
   | While Expr Stmt
   | Break
   | With
-  | Try
+  | Try Stmt Identifer Stmt
   | For
   | Throw
   | Return
