@@ -1,10 +1,11 @@
 module Parser.Parser (parse) where
 
-import           Control.Applicative           ((<$>))
 import           Data.Char                     (chr, digitToInt)
 import           Numeric                       (readHex, readInt, readOct)
-import           Parser.Tree                   (Expr (..), Identifer (..),
-                                                Tree (..), ApplyArg(..))
+import           Parser.Tree                   (Stmt(..)
+                                               ,Expr (..)
+                                               ,Identifer (..)
+                                               ,ApplyArg(..))
 import           Text.ParserCombinators.Parsec hiding (parse)
 import qualified Text.ParserCombinators.Parsec as P
 
@@ -13,18 +14,102 @@ import Control.Monad (liftM)
 void :: Monad m => m a -> m ()
 void f = f >> return ()
 
-parse :: String -> Either ParseError Tree
-parse = P.parse source "<TEXT>"
+parse :: FilePath -> String -> Either ParseError Stmt
+parse = P.parse source
 
-source :: Parser Tree
+source :: Parser Stmt
 source = do
     tjspace
-    src <- Expr <$> expr
+    src <- stmt
     tjspace
     eof
     return src
 
 --expr = choice [numLit, strLit, identifer]
+stmt :: Parser Stmt
+stmt = choice
+          [try ifStmt
+          ,try switchStmt
+          ,try whileStmt
+          ,execStmt]
+
+--------------------------------------------------------------------------------
+-- Stmt
+--------------------------------------------------------------------------------
+ifStmt :: Parser Stmt
+ifStmt = do
+    void (string "if")
+    tjspace
+    void (char '(')
+    tjspace
+    econd <- expr
+    tjspace
+    void (char ')')
+    strue <- stmt
+    sfalse <- optionMaybe elseStmt
+    return (If econd strue sfalse)
+  where
+    elseStmt = do
+      void (string "else")
+      tjspace
+      stmt
+
+breakStmt ::  Parser Stmt
+breakStmt = string "break" >> tjspace >> char ';' >> return Break
+
+switchStmt :: Parser Stmt
+switchStmt = do
+    void (string "switch")
+    tjspace
+    void (char '(')
+    tjspace
+    econd <- expr
+    tjspace
+    void (char ')')
+    tjspace
+    void (char '{')
+    tjspace
+    cases <- many switchCase
+    tjspace
+    def <- optionMaybe (try switchDefault)
+    tjspace
+    void (char '}')
+    return (Switch econd cases def)
+  where
+    switchCase :: Parser (Expr, [Stmt])
+    switchCase = do
+      void (string "case")
+      tjspace
+      caseCond <- expr
+      void (tjspace >> char ':')
+      caseStmt <- choice [try breakStmt, stmt] `sepEndBy` tjspace
+      return (caseCond, caseStmt)
+    switchDefault :: Parser [Stmt]
+    switchDefault = do
+      void (string "default" >> tjspace >> char ':')
+      caseStmt <- choice [try breakStmt, stmt] `sepEndBy` tjspace
+      tjspace
+      return caseStmt
+
+whileStmt :: Parser Stmt
+whileStmt = do
+  void (string "while")
+  tjspace
+  void (char '(')
+  tjspace
+  econd <- expr
+  tjspace
+  void (char ')')
+  tjspace
+  dostmt <- stmt
+  return (While econd dostmt)
+
+execStmt :: Parser Stmt
+execStmt = do
+  e <- expr
+  tjspace
+  void (char ';')
+  return (Exec e)
 
 --------------------------------------------------------------------------------
 -- Expr + Term

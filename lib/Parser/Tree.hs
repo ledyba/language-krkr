@@ -1,6 +1,24 @@
-module Parser.Tree (Tree(..),Expr(..),Identifer(..),ApplyArg(..)) where
+module Parser.Tree (Stmt(..),Expr(..),Identifer(..),ApplyArg(..)) where
 
 newtype Identifer = Identifer String deriving (Show, Eq)
+
+data Stmt =
+    If Expr Stmt (Maybe Stmt)
+  | Switch Expr [(Expr, [Stmt])] (Maybe [Stmt])
+  | While Expr Stmt
+  | Break
+  | With
+  | Try
+  | For
+  | Throw
+  | Return
+  | Prop
+  | Class
+  | Func
+  | Block
+  | Var
+  | Exec Expr
+  deriving (Show, Eq)
 
 data Expr =
       Bin String Expr Expr
@@ -25,9 +43,4 @@ data ApplyArg =
     ApplyLeft
   | ApplyArray Expr
   | ApplyExpr Expr
-  deriving (Show, Eq)
-
-data Tree =
-    Cont Tree Tree
-  | Expr Expr
   deriving (Show, Eq)
