@@ -8,6 +8,8 @@ import           Parser.Tree                   (Expr (..), Identifer (..),
 import           Text.ParserCombinators.Parsec hiding (parse)
 import qualified Text.ParserCombinators.Parsec as P
 
+import Control.Monad (liftM)
+
 void :: Monad m => m a -> m ()
 void f = f >> return ()
 
@@ -25,68 +27,145 @@ source = do
 --expr = choice [numLit, strLit, identifer]
 
 --------------------------------------------------------------------------------
--- Terms
+-- Expr + Term
 --------------------------------------------------------------------------------
 
+expr' :: [String] -> Parser Expr -> Parser Expr
+expr' ops bottom =
+    do
+      e <- bottom
+      es <- many (try rep)
+      tjspace
+      return (foldl fld e es)
+  where
+    fld e (op,e1) = Bin op e e1
+    rep :: Parser (String, Expr)
+    rep = do
+      tjspace
+      op <- try $ choice (fmap (try.string) ops)
+      tjspace
+      e <- try bottom
+      return (op, e)
+--
+
 expr :: Parser Expr
-expr = preOp
+expr = expr' [","] expr15
+
+expr15 :: Parser Expr
+expr15 = expr' ["instanceof"] expr14
+
+expr14 :: Parser Expr
+expr14 = expr' ["incontextof"] expr13
+
+expr13 :: Parser Expr
+expr13 = expr' ["=","<->","&=","|=","^=","-=","+=","%=","/=","\\=","*=","||=","&&=",">>=","<<=",">>>="] expr12
+
+expr12 :: Parser Expr
+expr12 =
+  do
+    c <- expr11
+    try (do
+        tjspace
+        void $ char '?'
+        tjspace
+        e1 <- expr12
+        tjspace
+        void $ char ':'
+        tjspace
+        e2 <- expr12
+        return (Tri c e1 e2)
+      ) <|> return c
+
+expr11 :: Parser Expr
+expr11 = expr' ["||"] expr10
+
+expr10 :: Parser Expr
+expr10 = expr' ["&&"] expr9
+
+expr9 :: Parser Expr
+expr9 = expr' ["|"] expr8
+
+expr8 :: Parser Expr
+expr8 = expr' ["^"] expr7
+
+expr7 :: Parser Expr
+expr7 = expr' ["&"] expr6
+
+expr6 :: Parser Expr
+expr6 = expr' ["===","!==","==","!="] expr5
+
+expr5 :: Parser Expr
+expr5 = expr' [">=","<=",">","<"] expr4
+
+expr4 :: Parser Expr
+expr4 = expr' [">>","<<",">>>"] expr3
+
+expr3 :: Parser Expr
+expr3 = expr' ["+","-"] expr2
+
+expr2 :: Parser Expr
+expr2 = expr' ["%","/","\\","*"] expr1
+
+expr1 :: Parser Expr
+expr1 = do
+    mcast <- optionMaybe (do
+      void $ char '('
+      tjspace
+      name <- identifer
+      tjspace
+      void $ char ')'
+      return (Cast name))
+    case mcast of
+      Just cast -> liftM cast expr1
+      Nothing -> preOp
 
 preOp :: Parser Expr
 preOp = do
-          mop <- optionMaybe $ choice $ fmap string ["!","~","--","++","new","invalidate","delete", "typeof", "#", "$", "+", "-", "&", "*"]
-          tjspace
-          case mop of
-            Nothing -> postOp
-            Just op -> preOp >>= \e -> return (PreUni op e)
+          ops <- choice (fmap (try.string) ["!","~","--","++","new","invalidate","delete", "typeof", "#", "$", "+", "-", "&", "*"]) `sepEndBy` tjspace
+          e <- postOp
+          return (foldl (flip PreUni) e (reverse ops))
 
 postOp :: Parser Expr
 postOp = do
-    t0 <- term
-    t1 <- rep t0
-    repop t1
+    e0 <- term
+    tjspace
+    as <- apply `sepEndBy` tjspace
+    return (foldl (\e a -> a e) e0 as)
   where
-    repop :: Expr -> Parser Expr
-    repop expr0 = try (tjspace >> applyop expr0 >>= \expr1 -> repop expr1) <|> return expr0
-    applyop :: Expr -> Parser Expr
-    applyop expr0 = do
-      op <- choice [string "++", string "--", string "!", string "isvalid"]
-      return (PostUni expr0 op)
-    rep :: Expr -> Parser Expr
-    rep expr0 = try (tjspace >> apply expr0 >>= \expr1 -> rep expr1) <|> return expr0
-    apply :: Expr -> Parser Expr
-    apply expr0 =
-        choice [
+    apply :: Parser (Expr -> Expr)
+    apply = try (choice [
           do
+            op <- choice (fmap (try.string) ["++", "--", "!", "isvalid"])
+            return (`PostUni` op)
+          ,do
             void $ char '['
             tjspace
-            expr1 <- expr
+            e1 <- expr
             tjspace
             void $ char ']'
-            return (Index expr0 expr1)
+            return (`Index` e1)
           ,do
             void $ char '('
             tjspace
             exprs <- applyArg `sepBy` (tjspace >> char ',' >> tjspace)
             tjspace
             void $ char ')'
-            return (Call expr0 exprs)
+            return (`Call` exprs)
           ,do
             void $ char '.'
             tjspace
             name <- identifer
-            return (Dot expr0 name)
-        ]
+            return (`Dot` name)
+        ])
         where
-          applyArg = leftApply <|> exprApply
+          applyArg = try leftApply <|> exprApply
           leftApply = (void (char '*') <|> void(string "...")) >> return ApplyLeft
           exprApply = do
             e <- expr
-            (void (char '*') >> return (ApplyArray e)) <|>  return (ApplyExpr e)
+            try (void (char '*') >> return (ApplyArray e)) <|>  return (ApplyExpr e)
 
 term :: Parser Expr
-term = do
-  tjspace
-  r <- choice
+term = choice
     [numLit
     ,strLit
     ,Dot WithThis <$> (char '.' >> tjspace >> identifer)
@@ -94,13 +173,13 @@ term = do
     ,arrayLit
     ,do
       void $ char '('
+      tjspace
       e <- expr
+      tjspace
       void $ char ')'
       return e
     ,fmap Ident identifer
     ]
-  tjspace
-  return r
 
 --------------------------------------------------------------------------------
 -- Literals
@@ -259,10 +338,10 @@ stringLit = choice [singleStringLit, doubleStringLit]
 
 tjspace :: Parser ()
 tjspace = skipMany (void space <|> comment)
-    where comment = choice [oneline, multline]
+    where comment = choice [try oneline, try multline]
           oneline = do
-            void $ try $ string "//"
+            void $ string "//"
             void $ manyTill anyChar (try $ choice [void newline, eof])
           multline = do
-            void $ try $ string "/*"
+            void $ string "/*"
             void $ manyTill anyChar (try (string "*/"))

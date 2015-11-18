@@ -25,6 +25,7 @@ spec = do
     it "Parse Hex Int" $ do
       parse "0x123" `shouldBe` Right (Expr $ Int 0x123)
       parse "0X123" `shouldBe` Right (Expr $ Int 0x123)
+
   describe "str literal test" $ do
     it "Parse Single Str" $ parse "'anata to java'" `shouldBe` Right (Expr $ Str "anata to java")
     it "Parse Single Str With Comment" $ parse "'anata to java' /* test */" `shouldBe` Right (Expr $ Str "anata to java")
@@ -32,6 +33,7 @@ spec = do
     it "Parse Double Str" $ parse "\"anata \\\"to java\"" `shouldBe` Right (Expr $ Str "anata \"to java")
     it "Parse Double Str" $ parse "\"anata 'to java\"" `shouldBe` Right (Expr $ Str "anata 'to java")
     it "Parse Double Str" $ parse "\"anata \\n\\nto java\"" `shouldBe` Right (Expr $ Str "anata \n\nto java")
+
   describe "identifer test" $ do
     it "Parse Identifer" $ parse "abc123" `shouldBe` Right (Expr $ Ident $ Identifer "abc123")
     it "Parse Identifer" $ parse "__abc123__" `shouldBe` Right (Expr $ Ident $ Identifer "__abc123__")
@@ -47,3 +49,18 @@ spec = do
     it "Parse PreOp" $ parse "++a[123]" `shouldBe` Right (Expr (PreUni "++" (Index (Ident (Identifer "a")) (Int 123))))
     it "Parse PreOp" $ parse "++ invalidate a[123].test" `shouldBe` Right (Expr (PreUni "++" (PreUni "invalidate" (Dot (Index (Ident (Identifer "a")) (Int 123)) (Identifer "test")))))
     it "Parse PreOp" $ parse "++ invalidate a[123].test" `shouldBe` Right (Expr (PreUni "++" (PreUni "invalidate" (Dot (Index (Ident (Identifer "a")) (Int 123)) (Identifer "test")))))
+
+  describe "complex" $ do
+    it "Parse PreOp" $ parse "x ? 1 : 0" `shouldBe` Right (Expr
+            (Tri (Ident $ Identifer "x")
+                  (Int 1)
+                  (Int 0)))
+    it "Parse PreOp" $ parse "x ? a ? b : c : 0" `shouldBe` Right (Expr
+            (Tri (Ident $ Identifer "x")
+                  (Tri (Ident $ Identifer "a") (Ident $ Identifer "b") (Ident $ Identifer "c"))
+                  (Int 0)))
+    it "Parse PreOp" $ parse "x instanceof ++a[123] ? y ? z : 1 : 0" `shouldBe` Right (Expr
+            (Bin "instanceof" (Ident $ Identifer "x")
+              (Tri (PreUni "++" (Index (Ident (Identifer "a")) (Int 123)))
+                  (Tri (Ident $ Identifer "y") (Ident $ Identifer "z") (Int 1))
+                  (Int 0))))
