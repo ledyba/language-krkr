@@ -38,18 +38,15 @@ stmt = choice
 --------------------------------------------------------------------------------
 ifStmt :: Parser Stmt
 ifStmt = do
-    void (string "if")
-    tjspace
-    void (char '(')
-    tjspace
+    void (string "if" >> tjspace >> char '(' >> tjspace)
     econd <- expr
-    tjspace
-    void (char ')')
+    void (tjspace >> char ')' >> tjspace)
     strue <- stmt
     sfalse <- optionMaybe elseStmt
     return (If econd strue sfalse)
   where
     elseStmt = do
+      tjspace
       void (string "else")
       tjspace
       stmt
