@@ -35,6 +35,9 @@ stmt = choice
           ,try switchStmt
           ,try whileStmt
           ,try tryStmt
+          ,try throwStmt
+          ,try returnStmt
+          ,try blockStmt
           ,execStmt]
 
 --------------------------------------------------------------------------------
@@ -70,7 +73,7 @@ switchStmt = do
   where
     switchCase :: Parser (Expr, [Stmt])
     switchCase = do
-      try $ void (string "case" >> tjspace)
+      try $ void (string "case" >> tjspace1)
       caseCond <- expr
       void (tjspace >> char ':' >> tjspace)
       caseStmt <- try (choice [try breakStmt, try stmt]) `sepEndBy` tjspace
@@ -93,11 +96,19 @@ whileStmt = do
   dostmt <- stmt
   return (While econd dostmt)
 
+blockStmt :: Parser Stmt
+blockStmt = do
+  void (char '{')
+  tjspace
+  stmts <- try stmt `sepBy` tjspace
+  tjspace
+  void (char '}')
+  return (Block stmts)
+
 execStmt :: Parser Stmt
 execStmt = do
   e <- expr
-  tjspace
-  void (char ';')
+  void (tjspace >> char ';')
   return (Exec e)
 
 tryStmt :: Parser Stmt
@@ -109,6 +120,19 @@ tryStmt = do
     void (tjspace >> char ')' >> tjspace)
     stmt1 <- stmt
     return (Try stmt0 name stmt1)
+
+throwStmt :: Parser Stmt
+throwStmt = keywordStmt "throw" Throw
+
+returnStmt :: Parser Stmt
+returnStmt = keywordStmt "return" Return
+
+keywordStmt :: String -> (Expr -> Stmt) -> Parser Stmt
+keywordStmt keyword cstr = do
+  string keyword >> tjspace1
+  e <- expr
+  void (tjspace >> char ';')
+  return (cstr e)
 
 --------------------------------------------------------------------------------
 -- Expr + Term
@@ -421,7 +445,13 @@ stringLit = choice [singleStringLit, doubleStringLit]
 --------------------------------------------------------------------------------
 
 tjspace :: Parser ()
-tjspace = skipMany (void space <|> comment)
+tjspace = skipMany comOrSpace
+
+tjspace1 :: Parser ()
+tjspace1 = skipMany1 comOrSpace
+
+comOrSpace :: Parser ()
+comOrSpace = void space <|> comment
     where comment = choice [try oneline, try multline]
           oneline = do
             void $ string "//"

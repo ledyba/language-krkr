@@ -9,13 +9,13 @@ data Stmt =
   | Break
   | With
   | Try Stmt Identifer Stmt
+  | Throw Expr
   | For
-  | Throw
-  | Return
+  | Return Expr
   | Prop
   | Class
   | Func
-  | Block
+  | Block [Stmt]
   | Var
   | Exec Expr
   deriving (Show, Eq)
