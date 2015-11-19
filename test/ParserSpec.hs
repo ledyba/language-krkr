@@ -53,6 +53,11 @@ spec = do
     it "Parse PreOp" $ parse "++ invalidate a[123].test;" `shouldBe` Right (Exec (PreUni "++" (PreUni "invalidate" (Dot (Index (Ident (Identifer "a")) (Int 123)) (Identifer "test")))))
     it "Parse PreOp" $ parse "++ invalidate a[123].test;" `shouldBe` Right (Exec (PreUni "++" (PreUni "invalidate" (Dot (Index (Ident (Identifer "a")) (Int 123)) (Identifer "test")))))
 
+  describe "Func Apply" $ do
+    it "Apply Normal" $ parse "a(123 );" `shouldBe` Right (Exec (Call (Ident (Identifer "a")) [ApplyExpr (Int 123)]))
+    it "Apply All" $ parse "a(...);" `shouldBe` Right (Exec (Call (Ident (Identifer "a")) [ApplyLeft]))
+    it "Apply ArrayAll" $ parse "a(xs*);" `shouldBe` Right (Exec (Call (Ident (Identifer "a")) [ApplyArray (Ident (Identifer "xs"))]))
+
   describe "complex expr" $ do
     it "Parse PreOp" $ parse "x ? 1 : 0;" `shouldBe` Right (Exec
             (Tri (Ident $ Identifer "x")
