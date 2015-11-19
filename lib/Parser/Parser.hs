@@ -35,9 +35,12 @@ stmt = choice
           ,try switchStmt
           ,try whileStmt
           ,try tryStmt
+          ,try forStmt
           ,try throwStmt
           ,try returnStmt
           ,try blockStmt
+          ,try breakStmt
+          ,try continueStmt
           ,execStmt]
 
 --------------------------------------------------------------------------------
@@ -61,6 +64,9 @@ ifStmt = do
 breakStmt ::  Parser Stmt
 breakStmt = string "break" >> tjspace >> char ';' >> return Break
 
+continueStmt ::  Parser Stmt
+continueStmt = string "continue" >> tjspace >> char ';' >> return Continue
+
 switchStmt :: Parser Stmt
 switchStmt = do
     void (string "switch" >> tjspace >> char '(')
@@ -81,7 +87,7 @@ switchStmt = do
     switchDefault :: Parser [Stmt]
     switchDefault = do
       try $ void (string "default" >> tjspace >> char ':' >> tjspace)
-      try (choice [try breakStmt, try stmt]) `sepEndBy` tjspace
+      try stmt `sepEndBy` tjspace
 
 whileStmt :: Parser Stmt
 whileStmt = do
@@ -120,6 +126,18 @@ tryStmt = do
     void (tjspace >> char ')' >> tjspace)
     stmt1 <- stmt
     return (Try stmt0 name stmt1)
+
+forStmt :: Parser Stmt
+forStmt = do
+    void (string "for" >> tjspace >> char '(' >> tjspace)
+    e0 <- expr
+    void (tjspace >> char ';' >> tjspace)
+    e1 <- expr
+    void (tjspace >> char ';' >> tjspace)
+    e2 <- expr
+    void (tjspace >> char ')' >> tjspace)
+    stmt0 <- stmt
+    return (For e0 e1 e2 stmt0)
 
 throwStmt :: Parser Stmt
 throwStmt = keywordStmt "throw" Throw

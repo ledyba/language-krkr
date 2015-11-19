@@ -10,7 +10,8 @@ data Stmt =
   | With
   | Try Stmt Identifer Stmt
   | Throw Expr
-  | For
+  | For Expr Expr Expr Stmt
+  | Continue
   | Return Expr
   | Prop
   | Class

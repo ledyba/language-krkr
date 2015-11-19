@@ -79,7 +79,12 @@ spec = do
     it "Parse Try" $ do
       parse "try x; catch (x) z;" `shouldBe` Right (Try (Exec (Ident (Identifer "x"))) (Identifer "x") (Exec (Ident (Identifer "z"))))
       parse "throw z;" `shouldBe` Right (Throw (Ident (Identifer "z")))
+
   it "Parse Return" $
     parse "return z;" `shouldBe` Right (Return (Ident (Identifer "z")))
+
+  it "Parse For" $
+    parse "for(x;y;z) {w; continue;}" `shouldBe` Right (For (Ident (Identifer "x")) (Ident (Identifer "y")) (Ident (Identifer "z")) (Block [(Exec (Ident (Identifer "w"))), Continue]))
+
   it "Parse Block" $
     parse "{ x ; y ; z;}" `shouldBe` Right (Block [Exec (Ident (Identifer "x")),Exec (Ident (Identifer "y")),Exec (Ident (Identifer "z"))])
