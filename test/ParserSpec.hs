@@ -67,24 +67,25 @@ spec = do
               (Tri (PreUni "++" (Index (Ident (Identifer "a")) (Int 123)))
                   (Tri (Ident $ Identifer "y") (Ident $ Identifer "z") (Int 1))
                   (Int 0))))
-  describe "complex expr" $ do
+  describe "Parse Statements" $ do
     it "Parse If" $ do
       parse "if (1) x;" `shouldBe` Right (If (Int 1) (Exec (Ident (Identifer "x"))) Nothing)
       parse "if (1) x; else y;" `shouldBe` Right (If (Int 1) (Exec (Ident (Identifer "x"))) (Just (Exec (Ident (Identifer "y")))))
     it "Parse While" $
       parse "while (1) x;" `shouldBe` Right (While (Int 1) (Exec (Ident (Identifer "x"))))
+    it "Parse With" $
+      parse "with (obj) .x = 1;" `shouldBe` Right (With (Ident (Identifer "obj")) (Exec (Bin "=" (Dot WithThis (Identifer "x")) (Int 1))))
     it "Parse Switch" $ do
       parse "switch (1) {case 1: x; case 2: y;}" `shouldBe` Right (Switch (Int 1) [(Int 1, [Exec (Ident (Identifer "x"))]), (Int 2, [Exec (Ident (Identifer "y"))])] Nothing)
       parse "switch (1) {case 1: x; case 2: y; default: z; k;}" `shouldBe` Right (Switch (Int 1) [(Int 1, [Exec (Ident (Identifer "x"))]), (Int 2, [Exec (Ident (Identifer "y"))])] (Just [Exec (Ident (Identifer "z")),Exec (Ident (Identifer "k"))]))
     it "Parse Try" $ do
       parse "try x; catch (x) z;" `shouldBe` Right (Try (Exec (Ident (Identifer "x"))) (Identifer "x") (Exec (Ident (Identifer "z"))))
       parse "throw z;" `shouldBe` Right (Throw (Ident (Identifer "z")))
+    it "Parse Return" $
+      parse "return z;" `shouldBe` Right (Return (Ident (Identifer "z")))
 
-  it "Parse Return" $
-    parse "return z;" `shouldBe` Right (Return (Ident (Identifer "z")))
+    it "Parse For" $
+      parse "for(x;y;z) {w; continue;}" `shouldBe` Right (For (Ident (Identifer "x")) (Ident (Identifer "y")) (Ident (Identifer "z")) (Block [Exec (Ident (Identifer "w")), Continue]))
 
-  it "Parse For" $
-    parse "for(x;y;z) {w; continue;}" `shouldBe` Right (For (Ident (Identifer "x")) (Ident (Identifer "y")) (Ident (Identifer "z")) (Block [(Exec (Ident (Identifer "w"))), Continue]))
-
-  it "Parse Block" $
-    parse "{ x ; y ; z;}" `shouldBe` Right (Block [Exec (Ident (Identifer "x")),Exec (Ident (Identifer "y")),Exec (Ident (Identifer "z"))])
+    it "Parse Block" $
+      parse "{ x ; y ; z;}" `shouldBe` Right (Block [Exec (Ident (Identifer "x")),Exec (Ident (Identifer "y")),Exec (Ident (Identifer "z"))])

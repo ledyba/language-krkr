@@ -34,6 +34,7 @@ stmt = choice
           [try ifStmt
           ,try switchStmt
           ,try whileStmt
+          ,try withStmt
           ,try tryStmt
           ,try forStmt
           ,try throwStmt
@@ -101,6 +102,19 @@ whileStmt = do
   tjspace
   dostmt <- stmt
   return (While econd dostmt)
+
+withStmt :: Parser Stmt
+withStmt = do
+  void (string "with")
+  tjspace
+  void (char '(')
+  tjspace
+  econd <- expr
+  tjspace
+  void (char ')')
+  tjspace
+  innerStmts <- stmt
+  return (With econd innerStmts)
 
 blockStmt :: Parser Stmt
 blockStmt = do

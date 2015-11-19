@@ -7,7 +7,7 @@ data Stmt =
   | Switch Expr [(Expr, [Stmt])] (Maybe [Stmt])
   | While Expr Stmt
   | Break
-  | With
+  | With Expr Stmt
   | Try Stmt Identifer Stmt
   | Throw Expr
   | For Expr Expr Expr Stmt
