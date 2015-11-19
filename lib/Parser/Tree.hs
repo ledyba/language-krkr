@@ -17,7 +17,7 @@ data Stmt =
   | Class
   | Func
   | Block [Stmt]
-  | Var
+  | Var [(Identifer,Maybe Expr)]
   | Exec Expr
   deriving (Show, Eq)
 

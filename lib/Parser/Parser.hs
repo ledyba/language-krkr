@@ -42,6 +42,7 @@ stmt = choice
           ,try blockStmt
           ,try breakStmt
           ,try continueStmt
+          ,try varStmt
           ,execStmt]
 
 --------------------------------------------------------------------------------
@@ -92,27 +93,17 @@ switchStmt = do
 
 whileStmt :: Parser Stmt
 whileStmt = do
-  void (string "while")
-  tjspace
-  void (char '(')
-  tjspace
+  void (string "while" >> tjspace >> void (char '(') >> tjspace)
   econd <- expr
-  tjspace
-  void (char ')')
-  tjspace
+  void (tjspace >> char ')' >> tjspace)
   dostmt <- stmt
   return (While econd dostmt)
 
 withStmt :: Parser Stmt
 withStmt = do
-  void (string "with")
-  tjspace
-  void (char '(')
-  tjspace
+  void (string "with" >> tjspace >> void (char '(') >> tjspace)
   econd <- expr
-  tjspace
-  void (char ')')
-  tjspace
+  void (tjspace >> char ')' >> tjspace)
   innerStmts <- stmt
   return (With econd innerStmts)
 
@@ -130,6 +121,18 @@ execStmt = do
   e <- expr
   void (tjspace >> char ';')
   return (Exec e)
+
+varStmt :: Parser Stmt
+varStmt = do
+    void (string "var" >> tjspace1)
+    binds <- bind `sepBy` (tjspace >> char ',' >> tjspace)
+    void (tjspace >> char ';')
+    return (Var binds)
+  where
+    bind = do
+      name <- identifer
+      value <- optionMaybe ( try tjspace >> char '=' >> tjspace >> expr15 )
+      return (name,value)
 
 tryStmt :: Parser Stmt
 tryStmt = do
@@ -154,13 +157,13 @@ forStmt = do
     return (For e0 e1 e2 stmt0)
 
 throwStmt :: Parser Stmt
-throwStmt = keywordStmt "throw" Throw
+throwStmt = keywordStmt' "throw" Throw
 
 returnStmt :: Parser Stmt
-returnStmt = keywordStmt "return" Return
+returnStmt = keywordStmt' "return" Return
 
-keywordStmt :: String -> (Expr -> Stmt) -> Parser Stmt
-keywordStmt keyword cstr = do
+keywordStmt' :: String -> (Expr -> Stmt) -> Parser Stmt
+keywordStmt' keyword cstr = do
   string keyword >> tjspace1
   e <- expr
   void (tjspace >> char ';')

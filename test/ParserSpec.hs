@@ -89,3 +89,6 @@ spec = do
 
     it "Parse Block" $
       parse "{ x ; y ; z;}" `shouldBe` Right (Block [Exec (Ident (Identifer "x")),Exec (Ident (Identifer "y")),Exec (Ident (Identifer "z"))])
+
+    it "Parse For" $
+      parse "var x=1,y,z=w;" `shouldBe` Right (Var [(Identifer "x", Just (Int 1)), (Identifer "y", Nothing), (Identifer "z", Just (Ident (Identifer "w")))])
