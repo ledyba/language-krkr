@@ -1,4 +1,4 @@
-module Parser.Tree (Stmt(..),Expr(..),Identifer(..),ApplyArg(..)) where
+module Parser.Tree (Stmt(..),Expr(..),Identifer(..),ApplyArg(..),FuncArg(..)) where
 
 newtype Identifer = Identifer String deriving (Show, Eq)
 
@@ -15,7 +15,7 @@ data Stmt =
   | Return Expr
   | Prop
   | Class
-  | Func
+  | Func (Maybe Identifer) [FuncArg] Stmt
   | Block [Stmt]
   | Var [(Identifer,Maybe Expr)]
   | Exec Expr
@@ -44,4 +44,10 @@ data ApplyArg =
     ApplyLeft
   | ApplyArray Expr
   | ApplyExpr Expr
+  deriving (Show, Eq)
+
+data FuncArg =
+    FuncLeft
+  | FuncArray Identifer
+  | FuncArg Identifer (Maybe Expr)
   deriving (Show, Eq)

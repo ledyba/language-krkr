@@ -5,7 +5,8 @@ import           Numeric                       (readHex, readInt, readOct)
 import           Parser.Tree                   (Stmt(..)
                                                ,Expr (..)
                                                ,Identifer (..)
-                                               ,ApplyArg(..))
+                                               ,ApplyArg(..)
+                                               ,FuncArg(..))
 import           Text.ParserCombinators.Parsec hiding (parse)
 import qualified Text.ParserCombinators.Parsec as P
 
@@ -18,7 +19,7 @@ parse :: FilePath -> String -> Either ParseError Stmt
 parse = P.parse source
 
 parse2 :: FilePath -> String -> Either ParseError Stmt
-parse2 = P.parse switchStmt
+parse2 = P.parse functionStmt
 
 source :: Parser Stmt
 source = do
@@ -36,13 +37,14 @@ stmt = choice
           ,try whileStmt
           ,try withStmt
           ,try tryStmt
+          ,functionStmt
           ,try forStmt
           ,try throwStmt
           ,try returnStmt
           ,try blockStmt
           ,try breakStmt
           ,try continueStmt
-          ,try varStmt
+          ,varStmt
           ,execStmt]
 
 --------------------------------------------------------------------------------
@@ -109,10 +111,8 @@ withStmt = do
 
 blockStmt :: Parser Stmt
 blockStmt = do
-  void (char '{')
-  tjspace
-  stmts <- try stmt `sepBy` tjspace
-  tjspace
+  void (char '{' >> tjspace)
+  stmts <- try stmt `sepEndBy` tjspace
   void (char '}')
   return (Block stmts)
 
@@ -124,7 +124,7 @@ execStmt = do
 
 varStmt :: Parser Stmt
 varStmt = do
-    void (string "var" >> tjspace1)
+    void (try (string "var" >> tjspace1))
     binds <- bind `sepBy` (tjspace >> char ',' >> tjspace)
     void (tjspace >> char ';')
     return (Var binds)
@@ -155,6 +155,33 @@ forStmt = do
     void (tjspace >> char ')' >> tjspace)
     stmt0 <- stmt
     return (For e0 e1 e2 stmt0)
+
+functionStmt :: Parser Stmt
+functionStmt = do
+    void (try (string "function"))
+    name <- optionMaybe (try tjspace1 >> identifer)
+    tjspace
+    args <- option [] argsList
+    tjspace
+    f <- blockStmt
+    return (Func name args f)
+  where
+    argsList = do
+      try (char '(') >> tjspace
+      args <- arg `sepBy` (tjspace >> char ',' >> tjspace)
+      void (tjspace >> char ')')
+      return args
+    arg = choice [star, withName]
+    star = try (char '*') >> return FuncLeft
+    withName = do
+      n <- identifer
+      tjspace
+      a <- (try (char '*') >> return FuncArray) <|> defArg
+      return (a n)
+    defArg = do
+      tjspace
+      v <- optionMaybe (char '=' >> tjspace >> expr15)
+      return (`FuncArg` v)
 
 throwStmt :: Parser Stmt
 throwStmt = keywordStmt' "throw" Throw
@@ -192,7 +219,10 @@ expr' ops bottom =
 --
 
 expr :: Parser Expr
-expr = expr' [","] expr15
+expr = expr' ["if"] expr16
+
+expr16 :: Parser Expr
+expr16 = expr' [","] expr15
 
 expr15 :: Parser Expr
 expr15 = expr' ["instanceof"] expr14

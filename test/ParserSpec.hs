@@ -17,6 +17,9 @@ isRight = either (const False) (const True)
 parse :: String -> Either ParseError Stmt
 parse = P.parse "<TEST>"
 
+parse2 :: String -> Either ParseError Stmt
+parse2 = P.parse2 "<TEST>"
+
 spec :: Spec
 spec = do
   describe "num literal test" $ do
@@ -95,5 +98,11 @@ spec = do
     it "Parse Block" $
       parse "{ x ; y ; z;}" `shouldBe` Right (Block [Exec (Ident (Identifer "x")),Exec (Ident (Identifer "y")),Exec (Ident (Identifer "z"))])
 
-    it "Parse For" $
+    it "Parse Var" $
       parse "var x=1,y,z=w;" `shouldBe` Right (Var [(Identifer "x", Just (Int 1)), (Identifer "y", Nothing), (Identifer "z", Just (Ident (Identifer "w")))])
+
+    it "Parse Function" $
+      parse "function f(a,b=1,a*) { return x; }" `shouldBe` Right (Func (Just (Identifer "f")) [FuncArg (Identifer "a") Nothing, FuncArg (Identifer "b") (Just (Int 1)), FuncArray (Identifer "a")] (Block [Return (Ident (Identifer "x"))]))
+
+    it "Parse Class" $
+      parse ";" `shouldBe` Right undefined
