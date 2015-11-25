@@ -5,9 +5,9 @@
  To create Krkr game, you can use 2 languages, TJS and KAG:
 
  - TJS: JavaScript like language.
- - KAG: Scenario script.
+ - KAG: scenario scripts.
 
-This library only implements a TJS parser now. Implementing a KAG parser is also planned for future, of course.
+This library only provides a TJS parser now. Implementing a KAG parser is also planned for future, of course.
 
 ## 0. Prerequisites
 
