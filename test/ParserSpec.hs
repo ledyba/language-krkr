@@ -104,5 +104,26 @@ spec = do
     it "Parse Function" $
       parse "function f(a,b=1,a*) { return x; }" `shouldBe` Right (Func (Just (Identifer "f")) [FuncArg (Identifer "a") Nothing, FuncArg (Identifer "b") (Just (Int 1)), FuncArray (Identifer "a")] (Block [Return (Ident (Identifer "x"))]))
 
+    it "Parse Prop" $ do
+      parse "property x { getter { return z; } setter (y) { z = y; } }" `shouldBe` Right (
+        Prop
+          (Identifer "x")
+          (Just (Block [Return (Ident (Identifer "z"))]))
+          (Just (Identifer "y",Block [Exec (Bin "=" (Ident (Identifer "z")) (Ident (Identifer "y")))]))
+        )
+      parse "property x { getter { return z; } }" `shouldBe` Right (
+        Prop
+          (Identifer "x")
+          (Just (Block [Return (Ident (Identifer "z"))]))
+          Nothing
+        )
+      parse "property x { setter (y) { z = y; } }" `shouldBe` Right (
+        Prop
+          (Identifer "x")
+          Nothing
+          (Just (Identifer "y",Block [Exec (Bin "=" (Ident (Identifer "z")) (Ident (Identifer "y")))]))
+        )
+
+
     it "Parse Class" $
       parse ";" `shouldBe` Right undefined

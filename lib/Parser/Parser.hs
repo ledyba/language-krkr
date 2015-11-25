@@ -32,18 +32,19 @@ source = do
 --expr = choice [numLit, strLit, identifer]
 stmt :: Parser Stmt
 stmt = choice
-          [try ifStmt
-          ,try switchStmt
-          ,try whileStmt
-          ,try withStmt
-          ,try tryStmt
+          [ifStmt
+          ,switchStmt
+          ,whileStmt
+          ,withStmt
+          ,tryStmt
           ,functionStmt
-          ,try forStmt
-          ,try throwStmt
-          ,try returnStmt
-          ,try blockStmt
-          ,try breakStmt
-          ,try continueStmt
+          ,forStmt
+          ,throwStmt
+          ,returnStmt
+          ,blockStmt
+          ,breakStmt
+          ,continueStmt
+          ,propStmt
           ,varStmt
           ,execStmt]
 
@@ -52,7 +53,8 @@ stmt = choice
 --------------------------------------------------------------------------------
 ifStmt :: Parser Stmt
 ifStmt = do
-    void (string "if" >> tjspace >> char '(' >> tjspace)
+    void (try (string "if"))
+    tjspace >> char '(' >> tjspace
     econd <- expr
     void (tjspace >> char ')' >> tjspace)
     strue <- stmt
@@ -66,14 +68,15 @@ ifStmt = do
       stmt
 
 breakStmt ::  Parser Stmt
-breakStmt = string "break" >> tjspace >> char ';' >> return Break
+breakStmt = try (string "break" >> tjspace >> char ';') >> return Break
 
 continueStmt ::  Parser Stmt
-continueStmt = string "continue" >> tjspace >> char ';' >> return Continue
+continueStmt = try (string "continue" >> tjspace >> char ';') >> return Continue
 
 switchStmt :: Parser Stmt
 switchStmt = do
-    void (string "switch" >> tjspace >> char '(')
+    void (try (string "switch" >> tjspace >> char '('))
+    tjspace
     econd <- expr
     void (tjspace >> char ')' >> tjspace >> char '{' >> tjspace)
     cases <- try switchCase `sepEndBy` tjspace
@@ -83,27 +86,30 @@ switchStmt = do
   where
     switchCase :: Parser (Expr, [Stmt])
     switchCase = do
-      try $ void (string "case" >> tjspace1)
+      void (try (string "case") >> tjspace1)
       caseCond <- expr
       void (tjspace >> char ':' >> tjspace)
       caseStmt <- try (choice [try breakStmt, try stmt]) `sepEndBy` tjspace
       return (caseCond, caseStmt)
     switchDefault :: Parser [Stmt]
     switchDefault = do
-      try $ void (string "default" >> tjspace >> char ':' >> tjspace)
-      try stmt `sepEndBy` tjspace
+      void (try (string "default" >> tjspace >> char ':'))
+      tjspace
+      stmt `sepEndBy` tjspace
 
 whileStmt :: Parser Stmt
 whileStmt = do
-  void (string "while" >> tjspace >> void (char '(') >> tjspace)
+  void (try (string "while" >> tjspace >> char '('))
+  tjspace
   econd <- expr
-  void (tjspace >> char ')' >> tjspace)
+  tjspace >> char ')' >> tjspace
   dostmt <- stmt
   return (While econd dostmt)
 
 withStmt :: Parser Stmt
 withStmt = do
-  void (string "with" >> tjspace >> void (char '(') >> tjspace)
+  void (try (string "with" >> tjspace >> void (char '(')))
+  tjspace
   econd <- expr
   void (tjspace >> char ')' >> tjspace)
   innerStmts <- stmt
@@ -111,7 +117,7 @@ withStmt = do
 
 blockStmt :: Parser Stmt
 blockStmt = do
-  void (char '{' >> tjspace)
+  try (char '{') >> tjspace
   stmts <- try stmt `sepEndBy` tjspace
   void (char '}')
   return (Block stmts)
@@ -136,7 +142,8 @@ varStmt = do
 
 tryStmt :: Parser Stmt
 tryStmt = do
-    void (string "try" >> tjspace)
+    void (try (string "try" >> notFollowedBy identChar))
+    tjspace
     stmt0 <- stmt
     void (tjspace >> string "catch" >> tjspace >> char '(' >> tjspace)
     name <- identifer
@@ -146,7 +153,8 @@ tryStmt = do
 
 forStmt :: Parser Stmt
 forStmt = do
-    void (string "for" >> tjspace >> char '(' >> tjspace)
+    void (try (string "for" >> tjspace >> char '(' ))
+    tjspace
     e0 <- expr
     void (tjspace >> char ';' >> tjspace)
     e1 <- expr
@@ -158,7 +166,7 @@ forStmt = do
 
 functionStmt :: Parser Stmt
 functionStmt = do
-    void (try (string "function"))
+    void (try (string "function" >> notFollowedBy identChar))
     name <- optionMaybe (try tjspace1 >> identifer)
     tjspace
     args <- option [] argsList
@@ -191,10 +199,44 @@ returnStmt = keywordStmt' "return" Return
 
 keywordStmt' :: String -> (Expr -> Stmt) -> Parser Stmt
 keywordStmt' keyword cstr = do
-  string keyword >> tjspace1
+  try (string keyword >> tjspace1)
   e <- expr
   void (tjspace >> char ';')
   return (cstr e)
+
+propStmt :: Parser Stmt
+propStmt = do
+    try (string "property" >> tjspace1)
+    name <- identifer
+    tjspace >> char '{' >> tjspace
+    (getter,setter) <- one <|> two
+    void $ tjspace >> char '}'
+    return (Prop name getter setter)
+  where
+    one = do
+      getter <- getterStmt
+      tjspace
+      setter <- optionMaybe setterStmt
+      return (Just getter,setter)
+    two = do
+      setter <- setterStmt
+      tjspace
+      getter <- optionMaybe getterStmt
+      return (getter, Just setter)
+    getterStmt = do
+      try (void (string "getter"))
+      tjspace
+      optional (char '(' >> tjspace >> char ')')
+      tjspace
+      blockStmt
+    setterStmt = do
+      try (void (string "setter"))
+      tjspace >> char '(' >> tjspace
+      arg <- identifer
+      tjspace >> char ')' >> tjspace
+      content <- blockStmt
+      return (arg,content)
+
 
 --------------------------------------------------------------------------------
 -- Expr + Term
@@ -361,8 +403,10 @@ term = choice
 identifer :: Parser Identifer
 identifer = do
     f <- choice [letter, char '_']
-    n <- many $ choice [alphaNum, char '_']
+    n <- many identChar
     return $ Identifer (f:n)
+identChar :: Parser Char
+identChar = choice [alphaNum, char '_']
 
 arrayLit :: Parser Expr
 arrayLit = do

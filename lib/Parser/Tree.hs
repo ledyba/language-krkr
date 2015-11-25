@@ -13,7 +13,7 @@ data Stmt =
   | For Expr Expr Expr Stmt
   | Continue
   | Return Expr
-  | Prop
+  | Prop Identifer (Maybe Stmt) (Maybe (Identifer, Stmt))
   | Class
   | Func (Maybe Identifer) [FuncArg] Stmt
   | Block [Stmt]
