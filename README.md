@@ -7,7 +7,7 @@
  - TJS: JavaScript like language.
  - KAG: Scenario script.
 
- This library only implements a TJS parser today.
+This library only implements a TJS parser now. Implementing a KAG parser is also planned for future, of course.
 
 ## 0. Prerequisites
 
