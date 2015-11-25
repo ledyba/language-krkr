@@ -1,4 +1,4 @@
-module Language.TJS.Parser (parse,parse2) where
+module Language.TJS.Parser (parse) where
 
 import           Data.Char                     (chr, digitToInt)
 import           Numeric                       (readHex, readInt, readOct)
@@ -23,9 +23,6 @@ void f = f >> return ()
 
 parse :: FilePath -> String -> Either ParseError Stmt
 parse = P.parse source
-
-parse2 :: FilePath -> String -> Either ParseError Stmt
-parse2 = P.parse classStmt
 
 source :: Parser Stmt
 source = do

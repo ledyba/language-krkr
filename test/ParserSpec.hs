@@ -17,9 +17,6 @@ isRight = either (const False) (const True)
 parse :: String -> Either ParseError Stmt
 parse = P.parse "<TEST>"
 
-parse2 :: String -> Either ParseError Stmt
-parse2 = P.parse2 "<TEST>"
-
 spec :: Spec
 spec = do
   describe "num literal test" $ do
