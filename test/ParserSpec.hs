@@ -1,3 +1,4 @@
+{-# LANGUAGE OverloadedStrings #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 module ParserSpec where
 
@@ -5,6 +6,7 @@ import Test.Hspec
 import qualified Language.TJS.Parser as P
 import Language.TJS.Tree
 import Text.ParserCombinators.Parsec.Error (ParseError)
+import Data.Text
 
 isLeft :: Either a b -> Bool
 isLeft  = either (const True) (const False)
@@ -14,7 +16,7 @@ isRight = either (const False) (const True)
 --instance Eq ParseError where
 --    a == b = errorMessages a == errorMessages b
 
-parse :: String -> Either ParseError Stmt
+parse :: Text -> Either ParseError Stmt
 parse = P.parse "<TEST>"
 
 spec :: Spec
@@ -36,6 +38,7 @@ spec = do
     it "Parse Double Str" $ parse "\"anata \\\"to java\";" `shouldBe` Right (Exec (Str "anata \"to java" NoSrcSpan ) NoSrcSpan)
     it "Parse Double Str" $ parse "\"anata 'to java\";" `shouldBe` Right (Exec (Str "anata 'to java" NoSrcSpan) NoSrcSpan)
     it "Parse Double Str" $ parse "\"anata \\n\\nto java\";" `shouldBe` Right (Exec (Str "anata \n\nto java" NoSrcSpan) NoSrcSpan)
+    it "Parse Double Str In Japanese" $ parse "\"あなたとジャバ\";" `shouldBe` Right (Exec (Str "あなたとジャバ" NoSrcSpan) NoSrcSpan)
 
   describe "identifer test" $ do
     it "Parse Identifer" $ parse "abc123;" `shouldBe` Right (Exec (Ident (Identifer "abc123") NoSrcSpan) NoSrcSpan)
