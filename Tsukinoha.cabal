@@ -19,8 +19,9 @@ cabal-version:       >=1.10
 Library
   Default-Language:     Haskell2010
   GHC-Options:          -Wall
-  Exposed-Modules:      Parser.Parser,
-                        Parser.Tree
+  Exposed-Modules:      Language.TJS.Parser,
+                        Language.TJS.Tree,
+                        Language.TJS
   hs-source-dirs:       lib
   Build-Depends:        base,parsec >= 3
 

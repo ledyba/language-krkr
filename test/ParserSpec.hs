@@ -2,8 +2,8 @@
 module ParserSpec where
 
 import Test.Hspec
-import qualified Parser.Parser as P
-import Parser.Tree
+import qualified Language.TJS.Parser as P
+import Language.TJS.Tree
 import Text.ParserCombinators.Parsec.Error (ParseError)
 
 isLeft :: Either a b -> Bool
