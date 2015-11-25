@@ -6,11 +6,17 @@ import           Parser.Tree                   (Stmt(..)
                                                ,Expr (..)
                                                ,Identifer (..)
                                                ,ApplyArg(..)
-                                               ,FuncArg(..))
+                                               ,FuncArg(..)
+                                               ,SrcSpan(..))
 import           Text.ParserCombinators.Parsec hiding (parse)
 import qualified Text.ParserCombinators.Parsec as P
 
-import Control.Monad (liftM)
+withSpan :: Parser (SrcSpan -> a) -> Parser a
+withSpan m = do
+  from <- getPosition
+  c <- m
+  to <- getPosition
+  return (c (SrcSpan from to))
 
 void :: Monad m => m a -> m ()
 void f = f >> return ()
@@ -53,7 +59,7 @@ stmt = choice
 -- Stmt
 --------------------------------------------------------------------------------
 ifStmt :: Parser Stmt
-ifStmt = do
+ifStmt = withSpan $ do
     void (try (string "if"))
     tjspace >> char '(' >> tjspace
     econd <- expr
@@ -69,13 +75,13 @@ ifStmt = do
       stmt
 
 breakStmt ::  Parser Stmt
-breakStmt = try (string "break" >> tjspace >> char ';') >> return Break
+breakStmt = withSpan $ try (string "break" >> tjspace >> char ';') >> return Break
 
 continueStmt ::  Parser Stmt
-continueStmt = try (string "continue" >> tjspace >> char ';') >> return Continue
+continueStmt = withSpan $ try (string "continue" >> tjspace >> char ';') >> return Continue
 
 switchStmt :: Parser Stmt
-switchStmt = do
+switchStmt = withSpan $ do
     void (try (string "switch" >> tjspace >> char '('))
     tjspace
     econd <- expr
@@ -99,7 +105,7 @@ switchStmt = do
       stmt `sepEndBy` tjspace
 
 whileStmt :: Parser Stmt
-whileStmt = do
+whileStmt = withSpan $ do
   void (try (string "while" >> tjspace >> char '('))
   tjspace
   econd <- expr
@@ -108,7 +114,7 @@ whileStmt = do
   return (While econd dostmt)
 
 withStmt :: Parser Stmt
-withStmt = do
+withStmt = withSpan $ do
   void (try (string "with" >> tjspace >> void (char '(')))
   tjspace
   econd <- expr
@@ -117,20 +123,20 @@ withStmt = do
   return (With econd innerStmts)
 
 blockStmt :: Parser Stmt
-blockStmt = do
+blockStmt = withSpan $ do
   try (char '{') >> tjspace
   stmts <- try stmt `sepEndBy` tjspace
   void (char '}')
   return (Block stmts)
 
 execStmt :: Parser Stmt
-execStmt = do
+execStmt = withSpan $ do
   e <- expr
   void (tjspace >> char ';')
   return (Exec e)
 
 varStmt :: Parser Stmt
-varStmt = do
+varStmt = withSpan $ do
     void (try (string "var" >> tjspace1))
     binds <- bind `sepBy` (tjspace >> char ',' >> tjspace)
     void (tjspace >> char ';')
@@ -142,7 +148,7 @@ varStmt = do
       return (name,value)
 
 tryStmt :: Parser Stmt
-tryStmt = do
+tryStmt = withSpan $ do
     void (try (string "try" >> notFollowedBy identChar))
     tjspace
     stmt0 <- stmt
@@ -153,7 +159,7 @@ tryStmt = do
     return (Try stmt0 name stmt1)
 
 forStmt :: Parser Stmt
-forStmt = do
+forStmt = withSpan $ do
     void (try (string "for" >> tjspace >> char '(' ))
     tjspace
     e0 <- expr
@@ -166,7 +172,7 @@ forStmt = do
     return (For e0 e1 e2 stmt0)
 
 functionStmt :: Parser Stmt
-functionStmt = do
+functionStmt = withSpan $ do
     void (try (string "function" >> notFollowedBy identChar))
     name <- optionMaybe (try tjspace1 >> identifer)
     tjspace
@@ -198,15 +204,15 @@ throwStmt = keywordStmt' "throw" Throw
 returnStmt :: Parser Stmt
 returnStmt = keywordStmt' "return" Return
 
-keywordStmt' :: String -> (Expr -> Stmt) -> Parser Stmt
-keywordStmt' keyword cstr = do
+keywordStmt' :: String -> (Expr -> SrcSpan -> Stmt) -> Parser Stmt
+keywordStmt' keyword cstr = withSpan $ do
   try (string keyword >> tjspace1)
   e <- expr
   void (tjspace >> char ';')
   return (cstr e)
 
 classStmt :: Parser Stmt
-classStmt = do
+classStmt = withSpan $ do
   try (string "class" >> tjspace1)
   name <- identifer
   tjspace >> char '{' >> tjspace
@@ -215,7 +221,7 @@ classStmt = do
   return (Class name stmts)
 
 propStmt :: Parser Stmt
-propStmt = do
+propStmt = withSpan $ do
     try (string "property" >> tjspace1)
     name <- identifer
     tjspace >> char '{' >> tjspace
@@ -255,19 +261,21 @@ propStmt = do
 expr' :: [String] -> Parser Expr -> Parser Expr
 expr' ops bottom =
     do
+      from <- getPosition
       e <- bottom
       es <- many (try rep)
       tjspace
-      return (foldl fld e es)
+      return (foldl (fld from) e es)
   where
-    fld e (op,e1) = Bin op e e1
-    rep :: Parser (String, Expr)
+    fld from e (op,e1,to) = Bin op e e1 (SrcSpan from to)
+    rep :: Parser (String, Expr, SourcePos)
     rep = do
       tjspace
       op <- try $ choice (fmap (try.string) ops)
       tjspace
       e <- try bottom
-      return (op, e)
+      to <- getPosition
+      return (op, e, to)
 --
 
 expr :: Parser Expr
@@ -288,6 +296,7 @@ expr13 = expr' ["=","<->","&=","|=","^=","-=","+=","%=","/=","\\=","*=","||=","&
 expr12 :: Parser Expr
 expr12 =
   do
+    from <- getPosition
     c <- expr11
     try (do
         tjspace
@@ -298,7 +307,8 @@ expr12 =
         void $ char ':'
         tjspace
         e2 <- expr12
-        return (Tri c e1 e2)
+        to <- getPosition
+        return (Tri c e1 e2 (SrcSpan from to))
       ) <|> return c
 
 expr11 :: Parser Expr
@@ -333,6 +343,7 @@ expr2 = expr' ["%","/","\\","*"] expr1
 
 expr1 :: Parser Expr
 expr1 = do
+    from <- getPosition
     mcast <- optionMaybe (do
       void $ char '('
       tjspace
@@ -341,47 +352,62 @@ expr1 = do
       void $ char ')'
       return (Cast name))
     case mcast of
-      Just cast -> liftM cast expr1
+      Just cast ->
+        do
+          e <- expr1
+          to <- getPosition
+          return (cast e (SrcSpan from to))
       Nothing -> preOp
 
 preOp :: Parser Expr
 preOp = do
-          ops <- choice (fmap (try.string) ["!","~","--","++","new","invalidate","delete", "typeof", "#", "$", "+", "-", "&", "*"]) `sepEndBy` tjspace
+          ops <- choice (fmap p ["!","~","--","++","new","invalidate","delete", "typeof", "#", "$", "+", "-", "&", "*"]) `sepEndBy` tjspace
           e <- postOp
-          return (foldl (flip PreUni) e (reverse ops))
+          to <- getPosition
+          return (foldl (\e0 (from, op) -> PreUni op e0 (SrcSpan from to)) e (reverse ops))
+        where
+          p s = do
+            from <- getPosition
+            void (try (string s))
+            return (from,s)
 
 postOp :: Parser Expr
 postOp = do
+    from <- getPosition
     e0 <- term
     tjspace
     as <- apply `sepEndBy` tjspace
-    return (foldl (\e a -> a e) e0 as)
+    return (foldl (\e (a,to) -> a e (SrcSpan from to)) e0 as)
   where
-    apply :: Parser (Expr -> Expr)
-    apply = try (choice [
-          do
-            op <- choice (fmap (try.string) ["++", "--", "!", "isvalid"])
-            return (`PostUni` op)
+    apply :: Parser (Expr -> SrcSpan -> Expr, SourcePos)
+    apply = choice [
+           do
+            op <- try (choice (fmap (try.string) ["++", "--", "!", "isvalid"]))
+            to <- getPosition
+            return ((`PostUni` op), to)
           ,do
-            void $ char '['
+            void $ try (char '[')
             tjspace
             e1 <- expr
             tjspace
             void $ char ']'
-            return (`Index` e1)
+            to <- getPosition
+            return ((`Index` e1), to)
           ,do
-            void $ char '('
+            void $ try (char '(')
             tjspace
             exprs <- applyArg `sepBy` (tjspace >> char ',' >> tjspace)
             tjspace
             void $ char ')'
-            return (`Call` exprs)
+            to <- getPosition
+            return ((`Call` exprs), to)
           ,do
-            void $ char '.'
+            void $ try (char '.')
             tjspace
             name <- identifer
-            return (`Dot` name)
-        ])
+            to <- getPosition
+            return ((`Dot` name), to)
+        ]
         where
           applyArg = try leftApply <|> exprApply
           leftApply = (void (char '*') <|> void(string "...")) >> return ApplyLeft
@@ -393,7 +419,7 @@ term :: Parser Expr
 term = choice
     [numLit
     ,strLit
-    ,Dot WithThis <$> (char '.' >> tjspace >> identifer)
+    ,withSpan $ Dot <$> withSpan (char '.' >> return WithThis) <*> (tjspace >> identifer)
     ,dictLit
     ,arrayLit
     ,do
@@ -403,7 +429,7 @@ term = choice
       tjspace
       void $ char ')'
       return e
-    ,fmap Ident identifer
+    ,withSpan $ fmap Ident identifer
     ]
 
 --------------------------------------------------------------------------------
@@ -415,11 +441,12 @@ identifer = do
     f <- choice [letter, char '_']
     n <- many identChar
     return $ Identifer (f:n)
+
 identChar :: Parser Char
 identChar = choice [alphaNum, char '_']
 
 arrayLit :: Parser Expr
-arrayLit = do
+arrayLit = withSpan $ do
     void $ char '['
     tjspace
     lits <- expr `sepEndBy` char ','
@@ -428,7 +455,7 @@ arrayLit = do
     return $ Array lits
 
 dictLit :: Parser Expr
-dictLit = do
+dictLit = withSpan $ do
     void $ string "%["
     tjspace
     lits <- dictItem `sepEndBy` char ','
@@ -453,10 +480,10 @@ uniLit = do
       (s,_) : _ -> return $ chr s
 
 zeroLit :: Parser Expr
-zeroLit = char '0' >> return (Int 0)
+zeroLit = withSpan $ char '0' >> return (Int 0)
 
 octLit :: Parser Expr
-octLit = do
+octLit = withSpan $ do
     void $ char '0'
     n <- many1 octDigit
     case readOct n of
@@ -464,7 +491,7 @@ octLit = do
       (s,_) : _ -> return $ Int s
 
 hexLit :: Parser Expr
-hexLit = do
+hexLit = withSpan $ do
     void $ char '0'
     r <- oneOf "xX"
     n <- many1 hexDigit
@@ -473,7 +500,7 @@ hexLit = do
       (s,_) : _ -> return $ Int s
 
 binLit :: Parser Expr
-binLit = do
+binLit = withSpan $ do
   void $ char '0'
   r <- oneOf "bB"
   n <- many1 (oneOf "01")
@@ -482,7 +509,7 @@ binLit = do
     (s,_) : _ -> return (Int s)
 
 decLit :: Parser Expr
-decLit = do
+decLit = withSpan $ do
     d <- decIntLit
     f <- optionMaybe decFloatLit
     e <- optionMaybe decExpLit
@@ -515,7 +542,7 @@ numLit :: Parser Expr
 numLit = choice [try decLit, try octLit, try hexLit, try binLit, zeroLit]
 
 strLit :: Parser Expr
-strLit = Str <$> stringLit
+strLit = withSpan $ Str <$> stringLit
 
 stringLit :: Parser String
 stringLit = choice [singleStringLit, doubleStringLit]
