@@ -1,8 +1,13 @@
-# TJS Parser for Haskell
+# Krkr Parser for Haskell
 
- TJS is a language used in [Kirikiri](https://github.com/krkrz/krkrz), a Japanese "bishojo" Game Engine.
+ [Krkr](https://github.com/krkrz/krkrz) is a Japanese "bishojo" Game Engine.
 
- This library implements a parser for this language.
+ To create Krkr game, you can use 2 languages, TJS and KAG:
+
+ - TJS: JavaScript like language.
+ - KAG: Scenario script.
+
+ This library only implements a TJS parser today.
 
 ## 0. Prerequisites
 
@@ -20,14 +25,14 @@ cabal install
 
 ## 2.How to Use
 
-import my library,
+import this library,
 
 ```haskell
 import Language.TJS as TJS
 ```
 
-then,
+then, call parse function:
 
-```
+```haskell
 TJS.parse "filename" "source"
 ```
