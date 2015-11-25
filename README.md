@@ -18,8 +18,8 @@ This library only implements a TJS parser now. Implementing a KAG parser is also
 ## 1.install
 
 ```bash
-git clone git@github.com:ledyba/language-tjs.git
-cd language-tjs
+git clone git@github.com:ledyba/language-krkr.git
+cd language-krkr
 cabal install
 ```
 
