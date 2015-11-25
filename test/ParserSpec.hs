@@ -44,7 +44,7 @@ spec = do
 
   describe "postop" $ do
     it "Parse PostOp" $ parse "a[123];" `shouldBe` Right (Exec (Index (Ident (Identifer "a") NoSrcSpan) (Int 123 NoSrcSpan) NoSrcSpan) NoSrcSpan)
-    it "Parse PostOp" $ parse "a[123].test;" `shouldBe` Right (Exec (Dot (Index (Ident (Identifer "a") NoSrcSpan) (Int 123 NoSrcSpan) NoSrcSpan) (Identifer "test") NoSrcSpan) NoSrcSpan)
+    it "Parse PostOp" $ parse "あ[123].test;" `shouldBe` Right (Exec (Dot (Index (Ident (Identifer "あ") NoSrcSpan) (Int 123 NoSrcSpan) NoSrcSpan) (Identifer "test") NoSrcSpan) NoSrcSpan)
     it "Parse PostOp" $ parse "a[123]++--!;" `shouldBe` Right (Exec (PostUni (PostUni (PostUni (Index (Ident (Identifer "a") NoSrcSpan) (Int 123 NoSrcSpan) NoSrcSpan) "++" NoSrcSpan) "--" NoSrcSpan) "!" NoSrcSpan) NoSrcSpan)
     it "Parse PostOp" $ parse "a[123].test++--! ;" `shouldBe` Right (Exec (PostUni (PostUni (PostUni (Dot (Index (Ident (Identifer "a") NoSrcSpan) (Int 123 NoSrcSpan) NoSrcSpan) (Identifer "test") NoSrcSpan) "++" NoSrcSpan) "--" NoSrcSpan) "!" NoSrcSpan) NoSrcSpan)
 

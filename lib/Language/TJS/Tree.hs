@@ -11,6 +11,7 @@ module Language.TJS.Tree (
   , sourceName, sourceLine, sourceColumn
 ) where
 
+import Data.Text
 import Text.ParserCombinators.Parsec (
    SourcePos
   ,SourceName, Line, Column
@@ -22,7 +23,7 @@ instance Eq SrcSpan where
   _             == NoSrcSpan     = True
   (SrcSpan a b) == (SrcSpan c d) = (==) a c && (==) b d
 
-newtype Identifer = Identifer String deriving (Show, Eq)
+newtype Identifer = Identifer Text deriving (Show, Eq)
 
 data Stmt =
     If       Expr Stmt (Maybe Stmt) SrcSpan
@@ -51,10 +52,10 @@ data Expr =
     | Cast     Identifer Expr SrcSpan
     | Int      Integer SrcSpan
     | Real     Double SrcSpan
-    | Str      String SrcSpan
+    | Str      Text SrcSpan
     | Ident    Identifer SrcSpan
     | Array    [Expr] SrcSpan
-    | Dict     [(String, Expr)] SrcSpan
+    | Dict     [(Text, Expr)] SrcSpan
     | Index    Expr Expr SrcSpan
     | Call     Expr [ApplyArg] SrcSpan
     | Dot      Expr Identifer SrcSpan

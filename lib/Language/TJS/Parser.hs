@@ -1,3 +1,5 @@
+{-# LANGUAGE OverloadedStrings,FlexibleContexts #-}
+
 module Language.TJS.Parser (parse) where
 
 import           Data.Char                     (chr, digitToInt)
@@ -8,8 +10,12 @@ import           Language.TJS.Tree             (Stmt(..)
                                                ,ApplyArg(..)
                                                ,FuncArg(..)
                                                ,SrcSpan(..))
-import           Text.ParserCombinators.Parsec hiding (parse)
-import qualified Text.ParserCombinators.Parsec as P
+import qualified Text.Parsec                   as P
+import           Text.Parsec                   hiding (parse)
+import           Text.Parsec.Text        (Parser)
+import           Data.Text               (Text)
+import           Data.String ()
+import qualified Data.Text as T
 
 withSpan :: Parser (SrcSpan -> a) -> Parser a
 withSpan m = do
@@ -21,7 +27,7 @@ withSpan m = do
 void :: Monad m => m a -> m ()
 void f = f >> return ()
 
-parse :: FilePath -> String -> Either ParseError Stmt
+parse :: FilePath -> Text -> Either ParseError Stmt
 parse = P.parse source
 
 source :: Parser Stmt
@@ -437,7 +443,7 @@ identifer :: Parser Identifer
 identifer = do
     f <- choice [letter, char '_']
     n <- many identChar
-    return $ Identifer (f:n)
+    return $ Identifer (T.pack (f:n))
 
 identChar :: Parser Char
 identChar = choice [alphaNum, char '_']
@@ -460,7 +466,7 @@ dictLit = withSpan $ do
     void $ char ']'
     return $ Dict lits
   where
-    dictItem :: Parser (String, Expr)
+    dictItem :: Parser (Text, Expr)
     dictItem = do
       key <- stringLit
       tjspace
@@ -501,7 +507,7 @@ binLit = withSpan $ do
   void $ char '0'
   r <- oneOf "bB"
   n <- many1 (oneOf "01")
-  case readInt 2 (`elem` "01") digitToInt n of
+  case readInt 2 (`elem` ("01" :: String)) digitToInt n of
     [] -> fail ("Could not read as binary: 0" ++ r : n)
     (s,_) : _ -> return (Int s)
 
@@ -541,7 +547,7 @@ numLit = choice [try decLit, try octLit, try hexLit, try binLit, zeroLit]
 strLit :: Parser Expr
 strLit = withSpan $ Str <$> stringLit
 
-stringLit :: Parser String
+stringLit :: Parser Text
 stringLit = choice [singleStringLit, doubleStringLit]
   where
     singleStringLitEsc :: Parser Char
@@ -557,12 +563,12 @@ stringLit = choice [singleStringLit, doubleStringLit]
                  char 'v' >> return (chr 0xb),
                  oneOf "xX" >> uniLit
                 ]
-    singleStringLit :: Parser String
+    singleStringLit :: Parser Text
     singleStringLit = do
         void $ char '\''
         str <- many $ choice [singleStringLitEsc, P.noneOf "\'"]
         void $ char '\''
-        return str
+        return (T.pack str)
     doubleStringLitEsc :: Parser Char
     doubleStringLitEsc = char '\\' >> choice
                 [ char '\\' >> return '\\',
@@ -576,12 +582,12 @@ stringLit = choice [singleStringLit, doubleStringLit]
                  char 'v' >> return (chr 0xb),
                  oneOf "xX" >> uniLit
                 ]
-    doubleStringLit :: Parser String
+    doubleStringLit :: Parser Text
     doubleStringLit = do
         void $ char '\"'
         str <- many $ choice [doubleStringLitEsc, P.noneOf "\""]
         void $ char '\"'
-        return str
+        return (T.pack str)
 
 --------------------------------------------------------------------------------
 -- WhiteSpaces
