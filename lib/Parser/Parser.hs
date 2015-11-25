@@ -19,7 +19,7 @@ parse :: FilePath -> String -> Either ParseError Stmt
 parse = P.parse source
 
 parse2 :: FilePath -> String -> Either ParseError Stmt
-parse2 = P.parse functionStmt
+parse2 = P.parse classStmt
 
 source :: Parser Stmt
 source = do
@@ -37,6 +37,7 @@ stmt = choice
           ,whileStmt
           ,withStmt
           ,tryStmt
+          ,classStmt
           ,functionStmt
           ,forStmt
           ,throwStmt
@@ -203,6 +204,15 @@ keywordStmt' keyword cstr = do
   e <- expr
   void (tjspace >> char ';')
   return (cstr e)
+
+classStmt :: Parser Stmt
+classStmt = do
+  try (string "class" >> tjspace1)
+  name <- identifer
+  tjspace >> char '{' >> tjspace
+  stmts <- (varStmt <|> functionStmt <|> propStmt) `sepEndBy` tjspace
+  void $ tjspace >> char '}'
+  return (Class name stmts)
 
 propStmt :: Parser Stmt
 propStmt = do

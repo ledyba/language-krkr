@@ -126,4 +126,7 @@ spec = do
 
 
     it "Parse Class" $
-      parse ";" `shouldBe` Right undefined
+      parse "class A{ var x; function Z() {} }" `shouldBe` Right (
+        Class (Identifer "A")
+        [Var [(Identifer "x", Nothing)],Func (Just (Identifer "Z")) [] (Block [])]
+      )

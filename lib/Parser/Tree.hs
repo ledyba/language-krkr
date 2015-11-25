@@ -14,7 +14,7 @@ data Stmt =
   | Continue
   | Return Expr
   | Prop Identifer (Maybe Stmt) (Maybe (Identifer, Stmt))
-  | Class
+  | Class Identifer [Stmt]
   | Func (Maybe Identifer) [FuncArg] Stmt
   | Block [Stmt]
   | Var [(Identifer,Maybe Expr)]
