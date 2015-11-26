@@ -32,11 +32,15 @@ parse = P.parse source
 
 source :: Parser Stmt
 source = do
+    from <- getPosition
     tjspace
-    src <- stmt
+    src <- stmt `sepEndBy` tjspace
     tjspace
     eof
-    return src
+    to <- getPosition
+    case src of
+      [s] -> return s
+      l   -> return (Block l (SrcSpan from to))
 
 --expr = choice [numLit, strLit, identifer]
 stmt :: Parser Stmt
@@ -72,8 +76,7 @@ ifStmt = withSpan $ do
     return (If econd strue sfalse)
   where
     elseStmt = do
-      tjspace
-      void (string "else")
+      void (try (tjspace >> string "else"))
       tjspace
       stmt
 
