@@ -15,7 +15,7 @@ This library only provides a TJS parser now. Implementing a KAG parser is also p
 
   - https://www.haskell.org/platform/
 
-## 1.install
+## 1.Install
 
 ```bash
 git clone git@github.com:ledyba/language-krkr.git
@@ -36,3 +36,7 @@ then, call parse function:
 ```haskell
 TJS.parse "filename" "source"
 ```
+
+## 3.References
+
+ - TJS2 Manual: http://devdoc.kikyou.info/tvp/docs/tjs2doc/contents/
