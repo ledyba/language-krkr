@@ -127,9 +127,14 @@ spec = do
        NoSrcSpan)
 
 
-    it "Parse Class" $
+    it "Parse Class" $ do
       parse "class A{ var x; function Z() {} }" `shouldBe` Right (
-        Class (Identifer "A")
-        Nothing
-        [Var [(Identifer "x", Nothing)] NoSrcSpan,Func (Just (Identifer "Z")) [] (Block [] NoSrcSpan) NoSrcSpan]
-      NoSrcSpan)
+          Class (Identifer "A")
+          Nothing
+          [Var [(Identifer "x", Nothing)] NoSrcSpan,Func (Just (Identifer "Z")) [] (Block [] NoSrcSpan) NoSrcSpan]
+        NoSrcSpan)
+      parse "class A extends X,Y,Z{ var x; function Z() {} }" `shouldBe` Right (
+          Class (Identifer "A")
+          (Just [Identifer "X",Identifer "Y",Identifer "Z"])
+          [Var [(Identifer "x", Nothing)] NoSrcSpan,Func (Just (Identifer "Z")) [] (Block [] NoSrcSpan) NoSrcSpan]
+        NoSrcSpan)
