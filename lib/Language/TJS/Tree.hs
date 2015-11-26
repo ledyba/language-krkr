@@ -37,7 +37,7 @@ data Stmt =
   | Continue SrcSpan
   | Return   Expr SrcSpan
   | Prop     Identifer (Maybe Stmt) (Maybe (Identifer, Stmt)) SrcSpan
-  | Class    Identifer [Stmt] SrcSpan
+  | Class    Identifer (Maybe [Identifer]) [Stmt] SrcSpan
   | Func     (Maybe Identifer) [FuncArg] Stmt SrcSpan
   | Block    [Stmt] SrcSpan
   | Var      [(Identifer,Maybe Expr)] SrcSpan

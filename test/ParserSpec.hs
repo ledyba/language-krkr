@@ -130,5 +130,6 @@ spec = do
     it "Parse Class" $
       parse "class A{ var x; function Z() {} }" `shouldBe` Right (
         Class (Identifer "A")
+        Nothing
         [Var [(Identifer "x", Nothing)] NoSrcSpan,Func (Just (Identifer "Z")) [] (Block [] NoSrcSpan) NoSrcSpan]
       NoSrcSpan)

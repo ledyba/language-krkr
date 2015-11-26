@@ -216,12 +216,17 @@ keywordStmt' keyword cstr = withSpan $ do
 
 classStmt :: Parser Stmt
 classStmt = withSpan $ do
-  try (string "class" >> tjspace1)
-  name <- identifer
-  tjspace >> char '{' >> tjspace
-  stmts <- (varStmt <|> functionStmt <|> propStmt) `sepEndBy` tjspace
-  void $ tjspace >> char '}'
-  return (Class name stmts)
+    try (string "class" >> tjspace1)
+    name <- identifer
+    extends <- optionMaybe extendsStmt
+    tjspace >> char '{' >> tjspace
+    stmts <- (varStmt <|> functionStmt <|> propStmt) `sepEndBy` tjspace
+    void $ tjspace >> char '}'
+    return (Class name extends stmts)
+  where
+    extendsStmt = do
+      try (tjspace1 >> string "extends") >> tjspace1
+      identifer `sepBy` (tjspace >> char ',' >> tjspace)
 
 propStmt :: Parser Stmt
 propStmt = withSpan $ do
