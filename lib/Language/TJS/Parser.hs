@@ -184,29 +184,12 @@ forStmt = withSpan $ do
 functionStmt :: Parser Stmt
 functionStmt = withSpan $ do
     void (try (string "function" >> notFollowedBy identChar))
-    name <- optionMaybe (try tjspace1 >> identifer)
+    name <- tjspace1 >> identifer
     tjspace
-    args <- option [] argsList
+    args <- option [] funcArgsList
     tjspace
     f <- blockStmt
     return (Func name args f)
-  where
-    argsList = do
-      try (char '(') >> tjspace
-      args <- arg `sepBy` (tjspace >> char ',' >> tjspace)
-      void (tjspace >> char ')')
-      return args
-    arg = choice [star, withName]
-    star = try (char '*') >> return FuncLeft
-    withName = do
-      n <- identifer
-      tjspace
-      a <- (try (char '*') >> return FuncArray) <|> defArg
-      return (a n)
-    defArg = do
-      tjspace
-      v <- optionMaybe (char '=' >> tjspace >> expr15)
-      return (`FuncArg` v)
 
 throwStmt :: Parser Stmt
 throwStmt = keywordStmt' "throw" Throw
@@ -404,7 +387,7 @@ postOp = do
           ,do
             void $ try (char '(')
             tjspace
-            exprs <- applyArg `sepBy` (tjspace >> char ',' >> tjspace)
+            exprs <- applyArg `sepBy` (try (tjspace >> char ',') >> tjspace)
             tjspace
             void $ char ')'
             to <- getPosition
@@ -417,15 +400,17 @@ postOp = do
             return ((`Dot` name), to)
         ]
         where
-          applyArg = try leftApply <|> exprApply
+          applyArg = try leftApply <|> exprApply <|> voidArg
           leftApply = (void (char '*') <|> void(string "...")) >> return ApplyLeft
           exprApply = do
-            e <- expr
+            e <- try expr
             try (void (char '*') >> return (ApplyArray e)) <|>  return (ApplyExpr e)
+          voidArg = return ApplyVoid
 
 term :: Parser Expr
 term = choice
-    [numLit
+    [funcLit
+    ,numLit
     ,strLit
     ,withSpan $ Dot <$> withSpan (char '.' >> return WithThis) <*> (tjspace >> identifer)
     ,dictLit
@@ -588,6 +573,36 @@ stringLit = choice [singleStringLit, doubleStringLit]
         str <- many $ choice [doubleStringLitEsc, P.noneOf "\""]
         void $ char '\"'
         return (T.pack str)
+
+funcLit :: Parser Expr
+funcLit = withSpan $ do
+    try (string "function") >> tjspace
+    args <- option [] funcArgsList
+    f <- tjspace >> blockStmt
+    return (AnonFunc args f)
+
+--------------------------------------------------------------------------------
+-- ForFunctions
+--------------------------------------------------------------------------------
+
+funcArgsList :: Parser [FuncArg]
+funcArgsList = do
+    try (char '(') >> tjspace
+    args <- arg `sepBy` (try (tjspace >> char ',') >> tjspace)
+    void (tjspace >> char ')')
+    return args
+  where
+    arg = choice [star, withName]
+    star = try (char '*') >> return FuncLeft
+    withName = do
+      n <- identifer
+      tjspace
+      a <- (try (char '*') >> return FuncArray) <|> defArg
+      return (a n)
+    defArg = do
+      tjspace
+      v <- optionMaybe (char '=' >> tjspace >> expr15)
+      return (`FuncArg` v)
 
 --------------------------------------------------------------------------------
 -- WhiteSpaces

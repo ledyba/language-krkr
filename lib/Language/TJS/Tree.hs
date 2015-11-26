@@ -38,7 +38,7 @@ data Stmt =
   | Return   Expr SrcSpan
   | Prop     Identifer (Maybe Stmt) (Maybe (Identifer, Stmt)) SrcSpan
   | Class    Identifer (Maybe [Identifer]) [Stmt] SrcSpan
-  | Func     (Maybe Identifer) [FuncArg] Stmt SrcSpan
+  | Func     Identifer [FuncArg] Stmt SrcSpan
   | Block    [Stmt] SrcSpan
   | Var      [(Identifer,Maybe Expr)] SrcSpan
   | Exec     Expr SrcSpan
@@ -57,6 +57,7 @@ data Expr =
     | Ident    Identifer SrcSpan
     | Array    [Expr] SrcSpan
     | Dict     [(Expr, Expr)] SrcSpan
+    | AnonFunc [FuncArg] Stmt SrcSpan
     | Index    Expr Expr SrcSpan
     | Call     Expr [ApplyArg] SrcSpan
     | Dot      Expr Identifer SrcSpan
@@ -68,6 +69,7 @@ data ApplyArg =
     ApplyLeft
   | ApplyArray Expr
   | ApplyExpr Expr
+  | ApplyVoid
   deriving (Show, Eq)
 
 data FuncArg =

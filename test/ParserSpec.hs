@@ -104,8 +104,14 @@ spec = do
     it "Parse Var" $
       parse "var x=1,y,z=w;" `shouldBe` Right (Var [(Identifer "x", Just (Int 1 NoSrcSpan)), (Identifer "y", Nothing), (Identifer "z", Just (Ident (Identifer "w") NoSrcSpan))] NoSrcSpan)
 
-    it "Parse Function" $
-      parse "function f(a,b=1,a*) { return x; }" `shouldBe` Right (Func (Just (Identifer "f")) [FuncArg (Identifer "a") Nothing, FuncArg (Identifer "b") (Just (Int 1 NoSrcSpan)), FuncArray (Identifer "a")] (Block [Return (Ident (Identifer "x") NoSrcSpan) NoSrcSpan] NoSrcSpan) NoSrcSpan)
+    it "Parse Function" $ do
+      parse "function f(a,b=1,a*) { return x; }" `shouldBe` Right (Func (Identifer "f") [FuncArg (Identifer "a") Nothing, FuncArg (Identifer "b") (Just (Int 1 NoSrcSpan)), FuncArray (Identifer "a")] (Block [Return (Ident (Identifer "x") NoSrcSpan) NoSrcSpan] NoSrcSpan) NoSrcSpan)
+      parse "function (a,b=1,a*) { return x; };" `shouldBe` Right (Exec
+              (AnonFunc
+                [FuncArg (Identifer "a") Nothing, FuncArg (Identifer "b") (Just (Int 1 NoSrcSpan)), FuncArray (Identifer "a")]
+                (Block [Return (Ident (Identifer "x") NoSrcSpan) NoSrcSpan] NoSrcSpan)
+              NoSrcSpan)
+            NoSrcSpan)
 
     it "Parse Prop" $ do
       parse "property x { getter { return z; } setter (y) { z = y; } }" `shouldBe` Right (
@@ -132,10 +138,10 @@ spec = do
       parse "class A{ var x; function Z() {} }" `shouldBe` Right (
           Class (Identifer "A")
           Nothing
-          [Var [(Identifer "x", Nothing)] NoSrcSpan,Func (Just (Identifer "Z")) [] (Block [] NoSrcSpan) NoSrcSpan]
+          [Var [(Identifer "x", Nothing)] NoSrcSpan,Func (Identifer "Z") [] (Block [] NoSrcSpan) NoSrcSpan]
         NoSrcSpan)
       parse "class A extends X,Y,Z{ var x; function Z() {} }" `shouldBe` Right (
           Class (Identifer "A")
           (Just [Identifer "X",Identifer "Y",Identifer "Z"])
-          [Var [(Identifer "x", Nothing)] NoSrcSpan,Func (Just (Identifer "Z")) [] (Block [] NoSrcSpan) NoSrcSpan]
+          [Var [(Identifer "x", Nothing)] NoSrcSpan,Func (Identifer "Z") [] (Block [] NoSrcSpan) NoSrcSpan]
         NoSrcSpan)
