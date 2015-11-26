@@ -67,12 +67,12 @@ spec = do
             (Tri (Ident (Identifer "x")NoSrcSpan)
                   (Int 1 NoSrcSpan)
                   (Int 0 NoSrcSpan) NoSrcSpan)
-          NoSrcSpan)
+                  NoSrcSpan)
     it "Parse PreOp" $ parse "x ? a ? b : c : 0;" `shouldBe` Right (Exec
             (Tri (Ident (Identifer "x") NoSrcSpan)
                   (Tri (Ident (Identifer "a") NoSrcSpan) (Ident (Identifer "b") NoSrcSpan) (Ident (Identifer "c") NoSrcSpan) NoSrcSpan)
                   (Int 0 NoSrcSpan) NoSrcSpan)
-            NoSrcSpan)
+                  NoSrcSpan)
     it "Parse PreOp" $ parse "x instanceof ++a[123] ? y ? z : 1 : 0;" `shouldBe` Right (Exec
             (Bin "instanceof" (Ident (Identifer "x") NoSrcSpan)
               (Tri (PreUni "++" (Index (Ident (Identifer "a") NoSrcSpan) (Int 123 NoSrcSpan) NoSrcSpan) NoSrcSpan)
@@ -110,7 +110,7 @@ spec = do
               (AnonFunc
                 [FuncArg (Identifer "a") Nothing, FuncArg (Identifer "b") (Just (Int 1 NoSrcSpan)), FuncArray (Identifer "a")]
                 (Block [Return (Ident (Identifer "x") NoSrcSpan) NoSrcSpan] NoSrcSpan)
-              NoSrcSpan)
+                NoSrcSpan)
             NoSrcSpan)
 
     it "Parse Prop" $ do
@@ -125,13 +125,13 @@ spec = do
           (Identifer "x")
           (Just (Block [Return (Ident (Identifer "z") NoSrcSpan) NoSrcSpan] NoSrcSpan))
           Nothing
-       NoSrcSpan)
+          NoSrcSpan)
       parse "property x { setter (y) { z = y; } }" `shouldBe` Right (
         Prop
           (Identifer "x")
           Nothing
           (Just (Identifer "y",Block [Exec (Bin "=" (Ident (Identifer "z") NoSrcSpan) (Ident (Identifer "y") NoSrcSpan) NoSrcSpan) NoSrcSpan] NoSrcSpan))
-       NoSrcSpan)
+          NoSrcSpan)
 
 
     it "Parse Class" $ do
@@ -139,9 +139,9 @@ spec = do
           Class (Identifer "A")
           Nothing
           [Var [(Identifer "x", Nothing)] NoSrcSpan,Func (Identifer "Z") [] (Block [] NoSrcSpan) NoSrcSpan]
-        NoSrcSpan)
+          NoSrcSpan)
       parse "class A extends X,Y,Z{ var x; function Z() {} }" `shouldBe` Right (
           Class (Identifer "A")
           (Just [Identifer "X",Identifer "Y",Identifer "Z"])
           [Var [(Identifer "x", Nothing)] NoSrcSpan,Func (Identifer "Z") [] (Block [] NoSrcSpan) NoSrcSpan]
-        NoSrcSpan)
+          NoSrcSpan)

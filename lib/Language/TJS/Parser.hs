@@ -183,8 +183,7 @@ forStmt = withSpan $ do
 
 functionStmt :: Parser Stmt
 functionStmt = withSpan $ do
-    void (try (string "function" >> notFollowedBy identChar))
-    name <- tjspace1 >> identifer
+    name <- try (string "function" >> tjspace1 >> identifer)
     tjspace
     args <- option [] funcArgsList
     tjspace
@@ -326,7 +325,7 @@ expr5 :: Parser Expr
 expr5 = expr' [">=","<=",">","<"] expr4
 
 expr4 :: Parser Expr
-expr4 = expr' [">>","<<",">>>"] expr3
+expr4 = expr' [">>>",">>","<<"] expr3
 
 expr3 :: Parser Expr
 expr3 = expr' ["+","-"] expr2
@@ -352,7 +351,7 @@ expr1 = do
 
 preOp :: Parser Expr
 preOp = do
-          ops <- choice (fmap p ["!","~","--","++","new","invalidate","delete", "typeof", "#", "$", "+", "-", "&", "*"]) `sepEndBy` tjspace
+          ops <- choice (fmap p ["!","~","--","++","new","invalidate","delete", "typeof", "#", "$", "+", "-", "&", "*", "isvalid"]) `sepEndBy` tjspace
           e <- postOp
           to <- getPosition
           return (foldl (\e0 (from, op) -> PreUni op e0 (SrcSpan from to)) e (reverse ops))
