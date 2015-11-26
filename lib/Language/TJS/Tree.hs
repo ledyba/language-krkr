@@ -42,6 +42,7 @@ data Stmt =
   | Block    [Stmt] SrcSpan
   | Var      [(Identifer,Maybe Expr)] SrcSpan
   | Exec     Expr SrcSpan
+  | Nop      SrcSpan
   deriving (Show, Eq)
 
 data Expr =

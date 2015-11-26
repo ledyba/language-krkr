@@ -60,11 +60,15 @@ stmt = choice
           ,continueStmt
           ,propStmt
           ,varStmt
+          ,nopStmt
           ,execStmt]
 
 --------------------------------------------------------------------------------
 -- Stmt
 --------------------------------------------------------------------------------
+nopStmt :: Parser Stmt
+nopStmt = withSpan $ char ';' >> return Nop
+
 ifStmt :: Parser Stmt
 ifStmt = withSpan $ do
     void (try (string "if"))
@@ -265,7 +269,6 @@ propStmt = withSpan $ do
       content <- blockStmt
       return (arg,content)
 
-
 --------------------------------------------------------------------------------
 -- Expr + Term
 --------------------------------------------------------------------------------
@@ -282,10 +285,9 @@ expr' ops bottom =
     fld from e (op,e1,to) = Bin op e e1 (SrcSpan from to)
     rep :: Parser (String, Expr, SourcePos)
     rep = do
+      op <- try (tjspace >> choice (fmap (try.string) ops))
       tjspace
-      op <- try $ choice (fmap (try.string) ops)
-      tjspace
-      e <- try bottom
+      e <- bottom
       to <- getPosition
       return (op, e, to)
 --
@@ -310,15 +312,11 @@ expr12 =
   do
     from <- getPosition
     c <- expr11
-    try (do
-        tjspace
-        void $ char '?'
-        tjspace
-        e1 <- expr12
-        tjspace
-        void $ char ':'
-        tjspace
-        e2 <- expr12
+    (do
+        try (tjspace >> char '?' >> tjspace)
+        e1 <- expr
+        tjspace >> char ':' >> tjspace
+        e2 <- expr
         to <- getPosition
         return (Tri c e1 e2 (SrcSpan from to))
       ) <|> return c
@@ -357,11 +355,9 @@ expr1 :: Parser Expr
 expr1 = do
     from <- getPosition
     mcast <- optionMaybe (try (do
-      void $ char '('
-      tjspace
+      char '(' >> tjspace
       name <- identifer
-      tjspace
-      void $ char ')'
+      void $ tjspace >> char ')'
       return (Cast name)))
     case mcast of
       Just cast ->

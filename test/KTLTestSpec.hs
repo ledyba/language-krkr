@@ -36,7 +36,7 @@ enumAllTjs path = do
     justFiles <- filterM doesFileExist items
     justFolders <- filterM doesDirectoryExist items
     let srcs = filter (\k -> not (k `endswith` ".tjs")) justFiles
-    leftFiles <- mapM enumAllTjs (filter (\k -> not(k `startswith` ".")) justFolders)
+    leftFiles <- mapM enumAllTjs justFolders
     return (srcs ++ concat leftFiles)
 
 spec :: Spec
