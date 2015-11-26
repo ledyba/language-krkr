@@ -8,9 +8,7 @@ import qualified Language.TJS.Parser as P
 import Language.TJS.Tree
 import Text.ParserCombinators.Parsec.Error (ParseError)
 import Data.Text hiding (filter,concat)
-import Control.Monad.IO.Class
 import Control.Monad
-import Data.List
 import System.Directory
 import Data.String.Utils
 import System.FilePath (pathSeparator)

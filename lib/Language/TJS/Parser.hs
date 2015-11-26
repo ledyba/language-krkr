@@ -172,7 +172,7 @@ forStmt :: Parser Stmt
 forStmt = withSpan $ do
     void (try (string "for" >> tjspace >> char '(' ))
     tjspace
-    e0 <- varStmt <|> withSpan (expr >>= \k -> tjspace >> char ';' >> return (Exec k))
+    e0 <- varStmt <|> nopStmt <|> withSpan (expr >>= \k -> tjspace >> char ';' >> return (Exec k))
     tjspace
     e1 <- expr
     void (tjspace >> char ';' >> tjspace)
@@ -471,9 +471,9 @@ dictLit = withSpan $ do
     void $ char ']'
     return $ Dict lits
   where
-    dictItem :: Parser (Text, Expr)
+    dictItem :: Parser (Expr, Expr)
     dictItem = do
-      key <- stringLit
+      key <- expr15
       tjspace >> string "=>" >> tjspace
       value <- expr15
       return (key, value)

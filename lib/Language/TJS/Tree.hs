@@ -56,7 +56,7 @@ data Expr =
     | Str      Text SrcSpan
     | Ident    Identifer SrcSpan
     | Array    [Expr] SrcSpan
-    | Dict     [(Text, Expr)] SrcSpan
+    | Dict     [(Expr, Expr)] SrcSpan
     | Index    Expr Expr SrcSpan
     | Call     Expr [ApplyArg] SrcSpan
     | Dot      Expr Identifer SrcSpan
