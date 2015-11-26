@@ -28,7 +28,7 @@ cabal install
 import this library,
 
 ```haskell
-import Language.TJS as TJS
+import qualified Language.TJS as TJS
 ```
 
 then, call parse function:
