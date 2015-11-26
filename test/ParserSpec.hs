@@ -26,6 +26,7 @@ spec = do
     it "Parse Dec Int With Comment" $ parse "123; //here is the comment" `shouldBe` Right (Exec (Int 123 NoSrcSpan) NoSrcSpan)
     it "Parse Dec Int" $ parse "123e2;" `shouldBe` Right (Exec (Int 12300 NoSrcSpan) NoSrcSpan)
     it "Parse Dec Int" $ parse "123.0e2;" `shouldBe` Right (Exec (Real 12300.0 NoSrcSpan) NoSrcSpan)
+    it "Parse Dec Int" $ parse "0.01;" `shouldBe` Right (Exec (Real 0.01 NoSrcSpan) NoSrcSpan)
     it "Parse Oct Int" $ parse "0123;" `shouldBe` Right (Exec (Int 0o123 NoSrcSpan) NoSrcSpan)
     it "Parse Hex Int" $ do
       parse "0x123;" `shouldBe` Right (Exec (Int 0x123 NoSrcSpan) NoSrcSpan)
@@ -95,7 +96,7 @@ spec = do
       parse "return z;" `shouldBe` Right (Return (Ident (Identifer "z") NoSrcSpan) NoSrcSpan)
 
     it "Parse For" $
-      parse "for(x;y;z) {w; continue;}" `shouldBe` Right (For (Ident (Identifer "x") NoSrcSpan) (Ident (Identifer "y") NoSrcSpan) (Ident (Identifer "z") NoSrcSpan) (Block [Exec (Ident (Identifer "w") NoSrcSpan) NoSrcSpan, Continue NoSrcSpan] NoSrcSpan) NoSrcSpan)
+      parse "for(x;y;z) {w; continue;}" `shouldBe` Right (For (Exec (Ident (Identifer "x") NoSrcSpan) NoSrcSpan) (Ident (Identifer "y") NoSrcSpan) (Ident (Identifer "z") NoSrcSpan) (Block [Exec (Ident (Identifer "w") NoSrcSpan) NoSrcSpan, Continue NoSrcSpan] NoSrcSpan) NoSrcSpan)
 
     it "Parse Block" $
       parse "{ x ; y ; z;}" `shouldBe` Right (Block [Exec (Ident (Identifer "x") NoSrcSpan) NoSrcSpan,Exec (Ident (Identifer "y") NoSrcSpan) NoSrcSpan,Exec (Ident (Identifer "z") NoSrcSpan) NoSrcSpan] NoSrcSpan)

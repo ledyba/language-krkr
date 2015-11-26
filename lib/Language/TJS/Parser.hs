@@ -168,8 +168,8 @@ forStmt :: Parser Stmt
 forStmt = withSpan $ do
     void (try (string "for" >> tjspace >> char '(' ))
     tjspace
-    e0 <- expr
-    void (tjspace >> char ';' >> tjspace)
+    e0 <- varStmt <|> withSpan (expr >>= \k -> tjspace >> char ';' >> return (Exec k))
+    tjspace
     e1 <- expr
     void (tjspace >> char ';' >> tjspace)
     e2 <- expr
@@ -228,8 +228,9 @@ classStmt = withSpan $ do
     return (Class name extends stmts)
   where
     extendsStmt = do
-      try (tjspace1 >> string "extends") >> tjspace1
-      identifer `sepBy` (tjspace >> char ',' >> tjspace)
+      void (try (tjspace1 >> string "extends"))
+      tjspace1
+      identifer `sepBy` (try (tjspace >> char ',') >> tjspace)
 
 propStmt :: Parser Stmt
 propStmt = withSpan $ do
@@ -355,13 +356,13 @@ expr2 = expr' ["%","/","\\","*"] expr1
 expr1 :: Parser Expr
 expr1 = do
     from <- getPosition
-    mcast <- optionMaybe (do
+    mcast <- optionMaybe (try (do
       void $ char '('
       tjspace
       name <- identifer
       tjspace
       void $ char ')'
-      return (Cast name))
+      return (Cast name)))
     case mcast of
       Just cast ->
         do
@@ -469,7 +470,7 @@ dictLit :: Parser Expr
 dictLit = withSpan $ do
     void $ string "%["
     tjspace
-    lits <- dictItem `sepEndBy` char ','
+    lits <- dictItem `sepEndBy` (try (tjspace >> char ',') >> tjspace)
     tjspace
     void $ char ']'
     return $ Dict lits
@@ -477,10 +478,8 @@ dictLit = withSpan $ do
     dictItem :: Parser (Text, Expr)
     dictItem = do
       key <- stringLit
-      tjspace
-      void $ string "=>"
-      tjspace
-      value <- expr
+      tjspace >> string "=>" >> tjspace
+      value <- expr15
       return (key, value)
 
 uniLit :: Parser Char
@@ -490,38 +489,35 @@ uniLit = do
       [] -> fail ("Could not read as hex: 0x" ++ str)
       (s,_) : _ -> return $ chr s
 
-zeroLit :: Parser Expr
-zeroLit = withSpan $ char '0' >> return (Int 0)
+zeroLit :: Parser Integer
+zeroLit = char '0' >> return 0
 
 octLit :: Parser Expr
 octLit = withSpan $ do
-    void $ char '0'
-    n <- many1 octDigit
+    n <- try (char '0' >> many1 octDigit)
     case readOct n of
       [] -> fail ("Could not read as oct: " ++ n)
       (s,_) : _ -> return $ Int s
 
 hexLit :: Parser Expr
 hexLit = withSpan $ do
-    void $ char '0'
-    r <- oneOf "xX"
+    r <- try (char '0' >> oneOf "xX")
     n <- many1 hexDigit
     case readHex n of
-      [] -> fail ("Could not read as hex: 0" ++ r:n)
+      [] -> fail ("Could not read as hex: 0x" ++ r:n)
       (s,_) : _ -> return $ Int s
 
 binLit :: Parser Expr
 binLit = withSpan $ do
-  void $ char '0'
-  r <- oneOf "bB"
+  r <- try (char '0' >> oneOf "bB")
   n <- many1 (oneOf "01")
   case readInt 2 (`elem` ("01" :: String)) digitToInt n of
-    [] -> fail ("Could not read as binary: 0" ++ r : n)
+    [] -> fail ("Could not read as binary: 0" ++ r:n)
     (s,_) : _ -> return (Int s)
 
 decLit :: Parser Expr
 decLit = withSpan $ do
-    d <- decIntLit
+    d <- decIntLit <|> zeroLit
     f <- optionMaybe decFloatLit
     e <- optionMaybe decExpLit
     return $ case (f,e) of
@@ -532,25 +528,25 @@ decLit = withSpan $ do
     where
       decIntLit :: Parser Integer
       decIntLit = do
-          f <- oneOf "123456789"
+          f <- try (oneOf "123456789")
           n <- many digit
           return (read (f : n))
 
       decFloatLit :: Parser Double
       decFloatLit = do
-          void $ char '.'
+          void (try (char '.'))
           ds <- many1 digit
           return $ read $ '0':'.':ds
 
       decExpLit :: Parser Integer
       decExpLit = do
-          void $ oneOf "eE"
+          void (try (oneOf "eE"))
           s <- option 1 (char '-' >> return (-1))
           ds <- many1 digit
           return $ s * read ds
 
 numLit :: Parser Expr
-numLit = choice [try decLit, try octLit, try hexLit, try binLit, zeroLit]
+numLit = choice [octLit, binLit, hexLit, decLit]
 
 strLit :: Parser Expr
 strLit = withSpan $ Str <$> stringLit
