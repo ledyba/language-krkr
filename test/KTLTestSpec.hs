@@ -35,13 +35,13 @@ enumAllTjs path = do
     let items = fmap (\f -> path ++ pathSeparator:f) $ filter (\k -> k /= "." && k /= "..") allItems
     justFiles <- filterM doesFileExist items
     justFolders <- filterM doesDirectoryExist items
-    let srcs = filter (\k -> not (k `endswith` ".tjs")) justFiles
+    let srcs = filter (endswith ".tjs") justFiles
     leftFiles <- mapM enumAllTjs justFolders
     return (srcs ++ concat leftFiles)
 
 spec :: Spec
 spec =
-  describe "num literal test" $ do
+  describe "KTL Parse Test" $ do
     files <- runIO (enumAllTjs "sample/ktl")
     conv <- runIO $ open "utf16" (Just False)
     mapM_ (\f -> do
