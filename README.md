@@ -7,7 +7,7 @@
  - TJS: JavaScript like language.
  - KAG: scenario scripts.
 
-This library only provides a TJS parser now. Implementing a KAG parser is also planned for future, of course.
+This library provides parsers for those languages.
 
 ## 0. Prerequisites
 
@@ -29,12 +29,14 @@ import this library,
 
 ```haskell
 import qualified Language.TJS as TJS
+import qualified Language.KAG as KAG
 ```
 
 then, call parse function:
 
 ```haskell
 TJS.parse "filename" "source"
+KAG.parse "filename" "source"
 ```
 
 ## 3.References
