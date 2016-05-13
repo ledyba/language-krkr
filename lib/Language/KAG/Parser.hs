@@ -2,7 +2,6 @@
 
 module Language.KAG.Parser (parse) where
 
-import           Data.Char                     (chr, digitToInt)
 import           Language.TJS.Parser           (withSpan)
 import qualified Language.TJS.Parser           as TJS
 import           Language.TJS.Tree             (SrcSpan)
@@ -117,7 +116,7 @@ strLit :: Parser KagValue
 strLit = withSpan $ do
     str <- choice [quoted, raw]
     case T.head str of
-      '&'-> case P.parse TJS.stmt "<<in-KAG-script>>" str of
+      '&'-> case P.parse TJS.expr "<<in-KAG-script>>" (T.drop 1 str) of
                Right ast -> return (KagTjsValue ast)
                Left err -> P.parserFail (show err)
       '*'-> return (KagLabelValue (T.drop 1 str))
