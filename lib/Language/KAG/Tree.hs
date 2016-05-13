@@ -1,7 +1,8 @@
 module Language.KAG.Tree (
-  Kag
+    Kag(..)
+  , KagValue(..)
   -- module Language.TJS.Tree
-  ,SrcSpan(..)
+  , SrcSpan(..)
   , SourcePos
   , SourceName, Line, Column
   , sourceName, sourceLine, sourceColumn
@@ -13,9 +14,17 @@ import Language.TJS.Tree (
   ,SourcePos
   ,SourceName, Line, Column
   ,sourceName, sourceLine, sourceColumn)
+import qualified Language.TJS.Tree as TJS
 
 data Kag =
-    KagText Text
-  | KagTag String [(String,Maybe Text)]
-  | KagLabel String (Maybe Text)
-  deriving (Ord,Eq,Show)
+    KagText Text SrcSpan
+  | KagTag Text [(Text,Maybe KagValue)] SrcSpan
+  | KagLabel Text (Maybe Text) SrcSpan
+  | KagNewline SrcSpan
+  deriving (Eq,Show)
+
+data KagValue =
+    KagStrValue Text SrcSpan
+  | KagTjsValue TJS.Stmt SrcSpan
+  | KagLabelValue Text SrcSpan
+  deriving (Eq,Show)

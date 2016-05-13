@@ -1,6 +1,11 @@
 {-# LANGUAGE OverloadedStrings,FlexibleContexts #-}
 
-module Language.TJS.Parser (parse) where
+module Language.TJS.Parser (
+    parse
+  , withSpan
+  , stringLit
+  , stmt
+) where
 
 import           Data.Char                     (chr, digitToInt)
 import           Numeric                       (readHex, readInt, readOct)
