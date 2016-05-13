@@ -4,6 +4,7 @@ module Language.TJS.Parser (
     parse
   , withSpan
   , stringLit
+  , expr
   , stmt
 ) where
 

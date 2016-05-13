@@ -25,6 +25,6 @@ data Kag =
 
 data KagValue =
     KagStrValue Text SrcSpan
-  | KagTjsValue TJS.Stmt SrcSpan
+  | KagTjsValue TJS.Expr SrcSpan
   | KagLabelValue Text SrcSpan
   deriving (Eq,Show)
