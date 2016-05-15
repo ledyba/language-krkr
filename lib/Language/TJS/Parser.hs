@@ -178,11 +178,11 @@ forStmt :: Parser Stmt
 forStmt = withSpan $ do
     void (try (string "for" >> tjspace >> char '(' ))
     tjspace
-    e0 <- varStmt <|> nopStmt <|> withSpan (expr >>= \k -> tjspace >> char ';' >> return (Exec k))
+    e0 <- optionMaybe $ varStmt <|> nopStmt <|> withSpan (expr >>= \k -> tjspace >> char ';' >> return (Exec k))
     tjspace
-    e1 <- expr
+    e1 <- optionMaybe expr
     void (tjspace >> char ';' >> tjspace)
-    e2 <- expr
+    e2 <- optionMaybe expr
     void (tjspace >> char ')' >> tjspace)
     stmt0 <- stmt
     return (For e0 e1 e2 stmt0)

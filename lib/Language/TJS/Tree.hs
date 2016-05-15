@@ -33,7 +33,7 @@ data Stmt =
   | With     Expr Stmt SrcSpan
   | Try      Stmt Identifer Stmt SrcSpan
   | Throw    Expr SrcSpan
-  | For      Stmt Expr Expr Stmt SrcSpan
+  | For      (Maybe Stmt) (Maybe Expr) (Maybe Expr) Stmt SrcSpan
   | Continue SrcSpan
   | Return   Expr SrcSpan
   | Prop     Identifer (Maybe Stmt) (Maybe (Identifer, Stmt)) SrcSpan

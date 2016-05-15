@@ -96,7 +96,7 @@ spec = do
       parse "return z;" `shouldBe` Right (Return (Ident (Identifer "z") NoSrcSpan) NoSrcSpan)
 
     it "Parse For" $
-      parse "for(x;y;z) {w; continue;}" `shouldBe` Right (For (Exec (Ident (Identifer "x") NoSrcSpan) NoSrcSpan) (Ident (Identifer "y") NoSrcSpan) (Ident (Identifer "z") NoSrcSpan) (Block [Exec (Ident (Identifer "w") NoSrcSpan) NoSrcSpan, Continue NoSrcSpan] NoSrcSpan) NoSrcSpan)
+      parse "for(x;y;z) {w; continue;}" `shouldBe` Right (For (Just (Exec (Ident (Identifer "x") NoSrcSpan) NoSrcSpan)) (Just (Ident (Identifer "y") NoSrcSpan)) (Just (Ident (Identifer "z") NoSrcSpan)) (Block [Exec (Ident (Identifer "w") NoSrcSpan) NoSrcSpan, Continue NoSrcSpan] NoSrcSpan) NoSrcSpan)
 
     it "Parse Block" $
       parse "{ x ; y ; z;}" `shouldBe` Right (Block [Exec (Ident (Identifer "x") NoSrcSpan) NoSrcSpan,Exec (Ident (Identifer "y") NoSrcSpan) NoSrcSpan,Exec (Ident (Identifer "z") NoSrcSpan) NoSrcSpan] NoSrcSpan)
