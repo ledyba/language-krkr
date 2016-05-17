@@ -535,7 +535,10 @@ numLit :: Parser Expr
 numLit = choice [octLit, binLit, hexLit, decLit]
 
 strLit :: Parser Expr
-strLit = withSpan $ Str <$> stringLit
+strLit = withSpan $ do
+  str <- stringLit
+  more <- many $ try (tjspace >> stringLit)
+  return (Str (str `T.append` T.concat more))
 
 stringLit :: Parser Text
 stringLit = choice [singleStringLit, doubleStringLit]

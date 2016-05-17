@@ -40,6 +40,7 @@ spec = do
     it "Parse Double Str" $ parse "\"anata 'to java\";" `shouldBe` Right (Exec (Str "anata 'to java" NoSrcSpan) NoSrcSpan)
     it "Parse Double Str" $ parse "\"anata \\n\\nto java\";" `shouldBe` Right (Exec (Str "anata \n\nto java" NoSrcSpan) NoSrcSpan)
     it "Parse Double Str In Japanese" $ parse "\"あなたとジャバ\";" `shouldBe` Right (Exec (Str "あなたとジャバ" NoSrcSpan) NoSrcSpan)
+    it "Parse Separated Double Str In Japanese" $ parse "\"あなたと\"  \"ジャバ\";" `shouldBe` Right (Exec (Str "あなたとジャバ" NoSrcSpan) NoSrcSpan)
 
   describe "identifer test" $ do
     it "Parse Identifer" $ parse "abc123;" `shouldBe` Right (Exec (Ident (Identifer "abc123") NoSrcSpan) NoSrcSpan)
