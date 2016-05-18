@@ -417,6 +417,7 @@ term = choice
     [funcLit
     ,numLit
     ,strLit
+    ,regexpLit
     ,withSpan $ Dot <$> withSpan (char '.' >> return WithThis) <*> (tjspace >> identifer)
     ,dictLit
     ,arrayLit
@@ -581,6 +582,21 @@ stringLit = choice [singleStringLit, doubleStringLit]
         str <- many $ choice [doubleStringLitEsc, P.noneOf "\""]
         void $ char '\"'
         return (T.pack str)
+
+regexpLit :: Parser Expr
+regexpLit = withSpan $ do
+    try (void (string "/"))
+    str <- many regexChar
+    return $ Regexp (T.pack str)
+  where
+    regexChar = do
+      try (notFollowedBy (string "/"))
+      choice [regexCharEscape, regexCharNormal]
+    regexCharEscape = do
+      try (void (string "\\"))
+      anyChar
+    regexCharNormal = anyChar
+
 
 funcLit :: Parser Expr
 funcLit = withSpan $ do

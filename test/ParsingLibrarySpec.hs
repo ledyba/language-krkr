@@ -37,13 +37,17 @@ enumAllTjs path = do
     leftFiles <- mapM enumAllTjs justFolders
     return (srcs ++ concat leftFiles)
 
+parseTest :: FilePath -> String -> Spec
+parseTest dir code = do
+  files <- runIO $ enumAllTjs dir
+  conv <- runIO $ open code (Just False)
+  mapM_ (\f -> do
+      src <- runIO $ readFile f
+      let asrc = toUnicode conv src
+      it ("Parse: " ++ f) $ parse f asrc `shouldSatisfy` isRight
+    ) files
+
 spec :: Spec
-spec =
-  describe "KTL Parse Test" $ do
-    files <- runIO (enumAllTjs "sample/ktl")
-    conv <- runIO $ open "utf16" (Just False)
-    mapM_ (\f -> do
-        src <- runIO $ readFile f
-        let asrc = toUnicode conv src
-        it ("Parse: " ++ f) $ parse f asrc `shouldSatisfy` isRight
-      ) files
+spec = do
+  describe "KTL Parse Test" $ parseTest "sample/ktl" "utf16"
+  describe "Sample Parse Test" $ parseTest "sample/krkr2sample" "utf8"

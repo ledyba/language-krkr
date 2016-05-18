@@ -54,6 +54,7 @@ data Expr =
     | Int      Integer SrcSpan
     | Real     Double SrcSpan
     | Str      Text SrcSpan
+    | Regexp   Text SrcSpan
     | Ident    Identifer SrcSpan
     | Array    [Expr] SrcSpan
     | Dict     [(Expr, Expr)] SrcSpan
