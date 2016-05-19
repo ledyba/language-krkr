@@ -215,10 +215,13 @@ classStmt = withSpan $ do
     name <- identifer
     extends <- optionMaybe extendsStmt
     tjspace >> char '{' >> tjspace
-    stmts <- (varStmt <|> functionStmt <|> propStmt) `sepEndBy` tjspace
+    stmts <- choice [varStmt, functionStmt, propStmt, nopStmt] `sepEndBy` tjspace
     void $ tjspace >> char '}'
-    return (Class name extends stmts)
+    let stmts' = filter (not.isNop) stmts
+    return (Class name extends stmts')
   where
+    isNop (Nop _) = True
+    isNop _ = False
     extendsStmt = do
       void (try (tjspace1 >> string "extends"))
       tjspace1
