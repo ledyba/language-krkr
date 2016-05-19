@@ -464,8 +464,18 @@ dictLit = withSpan $ do
   where
     dictItem :: Parser (Expr, Expr)
     dictItem = do
-      key <- expr15
-      tjspace >> string "=>" >> tjspace
+      key <- choice [
+        try $ do
+          v <- expr15
+          tjspace >> string "=>" >> tjspace
+          return v,
+        do
+          (Identifer key,s) <- try $ withSpan $ do
+            key <- identifer
+            tjspace >> string ":" >> tjspace
+            return $ \s -> (key,s)
+          return (Str key s)
+        ]
       value <- expr15
       return (key, value)
 
@@ -587,7 +597,9 @@ regexpLit :: Parser Expr
 regexpLit = withSpan $ do
     try (void (string "/"))
     str <- many regexChar
-    return $ Regexp (T.pack str)
+    void (string "/")
+    flags <- many (oneOf "igl")
+    return $ Regexp (T.pack str) flags
   where
     regexChar = do
       try (notFollowedBy (string "/"))
