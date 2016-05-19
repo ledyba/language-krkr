@@ -229,7 +229,7 @@ propStmt = withSpan $ do
     try (string "property" >> tjspace1)
     name <- identifer
     tjspace >> char '{' >> tjspace
-    (getter,setter) <- one <|> two
+    (getter,setter) <- choice [one, two]
     void $ tjspace >> char '}'
     return (Prop name getter setter)
   where
