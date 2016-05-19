@@ -79,6 +79,8 @@ spec = do
               (Tri (PreUni "++" (Index (Ident (Identifer "a") NoSrcSpan) (Int 123 NoSrcSpan) NoSrcSpan) NoSrcSpan)
                   (Tri (Ident (Identifer "y") NoSrcSpan) (Ident (Identifer "z") NoSrcSpan) (Int 1 NoSrcSpan) NoSrcSpan)
                   (Int 0 NoSrcSpan) NoSrcSpan) NoSrcSpan) NoSrcSpan)
+    it "Parse multiple" $
+            parse "x *(y);" `shouldBe` Right (Exec (Bin "*" (Ident (Identifer "x") NoSrcSpan) (Ident (Identifer "y") NoSrcSpan) NoSrcSpan) NoSrcSpan)
   describe "Parse Statements" $ do
     it "Parse If" $ do
       parse "if (1) x;" `shouldBe` Right (If (Int 1 NoSrcSpan) (Exec (Ident (Identifer "x") NoSrcSpan) NoSrcSpan) Nothing NoSrcSpan)

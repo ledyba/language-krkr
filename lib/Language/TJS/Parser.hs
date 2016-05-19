@@ -72,6 +72,10 @@ stmt = choice
 --------------------------------------------------------------------------------
 -- Stmt
 --------------------------------------------------------------------------------
+isNop :: Stmt -> Bool
+isNop (Nop _) = True
+isNop _ = False
+
 nopStmt :: Parser Stmt
 nopStmt = withSpan $ char ';' >> return Nop
 
@@ -143,7 +147,8 @@ blockStmt = withSpan $ do
   try (char '{') >> tjspace
   stmts <- try stmt `sepEndBy` tjspace
   void (char '}')
-  return (Block stmts)
+  let stmts' = filter (not.isNop) stmts
+  return (Block stmts')
 
 execStmt :: Parser Stmt
 execStmt = withSpan $ do
@@ -160,7 +165,7 @@ varStmt = withSpan $ do
   where
     bind = do
       name <- identifer
-      value <- optionMaybe ( try tjspace >> char '=' >> tjspace >> expr15 )
+      value <- optionMaybe ( try (tjspace >> char '=') >> tjspace >> expr15 )
       return (name,value)
 
 tryStmt :: Parser Stmt
@@ -215,13 +220,11 @@ classStmt = withSpan $ do
     name <- identifer
     extends <- optionMaybe extendsStmt
     tjspace >> char '{' >> tjspace
-    stmts <- choice [varStmt, functionStmt, propStmt, nopStmt] `sepEndBy` tjspace
+    stmts <- stmt `sepEndBy` tjspace
     void $ tjspace >> char '}'
     let stmts' = filter (not.isNop) stmts
     return (Class name extends stmts')
   where
-    isNop (Nop _) = True
-    isNop _ = False
     extendsStmt = do
       void (try (tjspace1 >> string "extends"))
       tjspace1
@@ -305,9 +308,9 @@ expr12 =
     c <- expr11
     (do
         try (tjspace >> char '?' >> tjspace)
-        e1 <- expr
+        e1 <- expr15
         tjspace >> char ':' >> tjspace
-        e2 <- expr
+        e2 <- expr15
         to <- getPosition
         return (Tri c e1 e2 (SrcSpan from to))
       ) <|> return c
@@ -345,17 +348,24 @@ expr2 = expr' ["%","/","\\","*"] expr1
 expr1 :: Parser Expr
 expr1 = do
     from <- getPosition
-    mcast <- optionMaybe (try (do
-      char '(' >> tjspace
-      name <- identifer
-      void $ tjspace >> char ')'
-      return (Cast name)))
+    mcast <- optionMaybe $
+      try $ do
+        cast <- choice [
+          do
+            char '(' >> tjspace
+            name <- identifer
+            void $ tjspace >> char ')'
+            return (Cast name),
+          do
+            name <- choice (fmap string ["int", "real", "string"])
+            tjspace1
+            return (Cast (Identifer (T.pack name)))
+          ]
+        e <- expr1
+        to <- getPosition
+        return (cast e (SrcSpan from to))
     case mcast of
-      Just cast ->
-        do
-          e <- expr1
-          to <- getPosition
-          return (cast e (SrcSpan from to))
+      Just cast -> return cast
       Nothing -> preOp
 
 preOp :: Parser Expr
