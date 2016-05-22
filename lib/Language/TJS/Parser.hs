@@ -370,11 +370,13 @@ expr1 = do
 
 preOp :: Parser Expr
 preOp = do
-          ops <- choice (fmap p ["!","~","--","++","new","invalidate","delete", "typeof", "#", "$", "+", "-", "&", "*", "isvalid"]) `sepEndBy` tjspace
+          let seps = fmap p ["~","--","++","new","invalidate","delete", "typeof", "#", "$", "&", "*", "isvalid", "!", "+", "-"]
+          ops <- choice seps `sepEndBy` tjspace
           e <- postOp
           to <- getPosition
           return (foldl (\e0 (from, op) -> PreUni op e0 (SrcSpan from to)) e (reverse ops))
         where
+          p :: String -> Parser (SourcePos, String)
           p s = do
             from <- getPosition
             void (try (string s))
@@ -391,7 +393,7 @@ postOp = do
     apply :: Parser (Expr -> SrcSpan -> Expr, SourcePos)
     apply = choice [
            do
-            op <- try (choice (fmap (try.string) ["++", "--", "!", "isvalid"]))
+            op <- try (choice (exec:fmap (try.string) ["++", "--", "isvalid"]))
             to <- getPosition
             return ((`PostUni` op), to)
           ,do
@@ -418,6 +420,11 @@ postOp = do
             return ((`Dot` name), to)
         ]
         where
+          exec :: Parser String
+          exec = try $ do
+            void (string "!")
+            notFollowedBy (string "=")
+            return "!"
           applyArg = try leftApply <|> exprApply <|> voidArg
           leftApply = (void (char '*') <|> void(string "...")) >> return ApplyLeft
           exprApply = do
