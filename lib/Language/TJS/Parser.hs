@@ -267,8 +267,8 @@ propStmt = withSpan $ do
 -- Expr + Term
 --------------------------------------------------------------------------------
 
-expr' :: [String] -> Parser Expr -> Parser Expr
-expr' ops bottom =
+exprJoin :: [(String, Parser a)] -> Parser Expr -> Parser Expr
+exprJoin ops bottom =
     do
       from <- getPosition
       e <- bottom
@@ -279,27 +279,33 @@ expr' ops bottom =
     fld from e (op,e1,to) = Bin op e e1 (SrcSpan from to)
     rep :: Parser (String, Expr, SourcePos)
     rep = do
-      op <- try (tjspace >> choice (fmap (try.string) ops))
+      op <- try (tjspace >> choice (fmap sep ops))
       tjspace
       e <- bottom
       to <- getPosition
       return (op, e, to)
+    sep (str, op) = try $ do
+      void op
+      return str
+
+exprJoin' :: [String] -> Parser Expr -> Parser Expr
+exprJoin' ops bottom = exprJoin (fmap (\s -> (s, string s)) ops) bottom
 --
 
 expr :: Parser Expr
-expr = expr' ["if"] expr16
+expr = exprJoin [("if", string "if" >> notFollowedBy identChar)] expr16
 
 expr16 :: Parser Expr
-expr16 = expr' [","] expr15
+expr16 = exprJoin' [","] expr15
 
 expr15 :: Parser Expr
-expr15 = expr' ["instanceof"] expr14
+expr15 = exprJoin [("instanceof", string "instanceof" >> notFollowedBy identChar)] expr14
 
 expr14 :: Parser Expr
-expr14 = expr' ["incontextof"] expr13
+expr14 = exprJoin [("incontextof", string "incontextof" >> notFollowedBy identChar)] expr13
 
 expr13 :: Parser Expr
-expr13 = expr' ["=","<->","&=","|=","^=","-=","+=","%=","/=","\\=","*=","||=","&&=",">>=","<<=",">>>="] expr12
+expr13 = exprJoin' ["=","<->","&=","|=","^=","-=","+=","%=","/=","\\=","*=","||=","&&=",">>=","<<=",">>>="] expr12
 
 expr12 :: Parser Expr
 expr12 =
@@ -316,34 +322,34 @@ expr12 =
       ) <|> return c
 
 expr11 :: Parser Expr
-expr11 = expr' ["||"] expr10
+expr11 = exprJoin [("||", string "||" >> notFollowedBy (string "="))] expr10
 
 expr10 :: Parser Expr
-expr10 = expr' ["&&"] expr9
+expr10 = exprJoin [("&&", string "&&" >> notFollowedBy (string "="))] expr9
 
 expr9 :: Parser Expr
-expr9 = expr' ["|"] expr8
+expr9 = exprJoin [("|", string "|" >> notFollowedBy (oneOf "=|"))] expr8
 
 expr8 :: Parser Expr
-expr8 = expr' ["^"] expr7
+expr8 = exprJoin [("^", string "^" >> notFollowedBy (oneOf "=^"))] expr7
 
 expr7 :: Parser Expr
-expr7 = expr' ["&"] expr6
+expr7 = exprJoin [("&", string "&" >> notFollowedBy (oneOf "=&"))] expr6
 
 expr6 :: Parser Expr
-expr6 = expr' ["===","!==","==","!="] expr5
+expr6 = exprJoin' ["===","!==","==","!="] expr5
 
 expr5 :: Parser Expr
-expr5 = expr' [">=","<=",">","<"] expr4
+expr5 = exprJoin (fmap (\k -> (k, string k >> notFollowedBy (char '='))) [">=","<=",">","<"]) expr4
 
 expr4 :: Parser Expr
-expr4 = expr' [">>>",">>","<<"] expr3
+expr4 = exprJoin (fmap (\k -> (k, string k >> notFollowedBy (char '='))) [">>>",">>","<<"]) expr3
 
 expr3 :: Parser Expr
-expr3 = expr' ["+","-"] expr2
+expr3 = exprJoin (fmap (\k -> (k, string k >> notFollowedBy (char '='))) ["+","-"]) expr2
 
 expr2 :: Parser Expr
-expr2 = expr' ["%","/","\\","*"] expr1
+expr2 = exprJoin (fmap (\k -> (k, string k >> notFollowedBy (char '='))) ["%","/","\\","*"]) expr1
 
 expr1 :: Parser Expr
 expr1 = do
