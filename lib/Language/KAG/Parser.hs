@@ -47,9 +47,9 @@ kagLabel = withSpan $ do
   name <- many1 (satisfy (\t -> not(isKagSpace t || t == '\r' || t == '\n' || t == '|')))
   desc <- P.optionMaybe $ do
     void (try(string "|"))
-    desc <- manyTill anyChar newline
+    desc <- many1 (satisfy (\t -> not(t == '\r' || t == '\n')))
     return (T.pack desc)
-  void (try newline)
+  void newline
   return (KagLabel (T.pack name) desc)
 
 kagNewline :: Parser Kag
