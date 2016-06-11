@@ -393,16 +393,34 @@ expr1 = do
 
 preOp :: Parser Expr
 preOp = do
-          let seps = fmap p ["~","--","++","new","invalidate","delete", "typeof", "#", "$", "&", "*", "isvalid", "!", "+", "-"]
+          let seps = fmap p [
+                ("~", False),
+                ("--", False),
+                ("++", False),
+                ("new", True),
+                ("invalidate", True),
+                ("delete", True),
+                ("typeof", True),
+                ("#", False),
+                ("$", False),
+                ("&", False),
+                ("*", False),
+                ("isvalid", True),
+                ("!", False),
+                ("+", False),
+                ("-", False)]
           ops <- choice seps `sepEndBy` tjspace
           e <- postOp
           to <- getPosition
           return (foldl (\e0 (from, op) -> PreUni op e0 (SrcSpan from to)) e (reverse ops))
         where
-          p :: String -> Parser (SourcePos, String)
-          p s = do
+          p :: (String, Bool) -> Parser (SourcePos, String)
+          p (s,asciiOp) = do
             from <- getPosition
-            void (try (string s))
+            if asciiOp then
+              void (try (string s >> notFollowedBy identChar))
+            else
+              void (try (string s))
             return (from,s)
 
 postOp :: Parser Expr
@@ -416,7 +434,7 @@ postOp = do
     apply :: Parser (Expr -> SrcSpan -> Expr, SourcePos)
     apply = choice [
            do
-            op <- try (choice (exec:fmap (try.string) ["++", "--", "isvalid"]))
+            op <- try (choice (exec:fmap makeP [("++", False), ("--", False), ("isvalid", True)]))
             to <- getPosition
             return ((`PostUni` op), to)
           ,do
@@ -443,6 +461,13 @@ postOp = do
             return ((`Dot` name), to)
         ]
         where
+          makeP :: (String, Bool) -> Parser String
+          makeP (s,asciiOp) = do
+            if asciiOp then
+              void (try (string s >> notFollowedBy identChar))
+            else
+              void (try (string s))
+            return s
           exec :: Parser String
           exec = try $ do
             void (string "!")
