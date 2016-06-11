@@ -267,16 +267,15 @@ propStmt = withSpan $ do
 -- Expr + Term
 --------------------------------------------------------------------------------
 
-exprJoin :: [(String, Parser a)] -> Parser Expr -> Parser Expr
-exprJoin ops bottom =
+exprJoinLR :: ((Expr,SourcePos) -> [(String, Expr, SourcePos)] -> Expr)-> [(String, Parser a)] -> Parser Expr -> Parser Expr
+exprJoinLR foldE ops bottom =
     do
       from <- getPosition
       e <- bottom
       es <- many (try rep)
       tjspace
-      return (foldl (fld from) e es)
+      return (foldE (e, from) es)
   where
-    fld from e (op,e1,to) = Bin op e e1 (SrcSpan from to)
     rep :: Parser (String, Expr, SourcePos)
     rep = do
       op <- try (tjspace >> choice (fmap sep ops))
@@ -288,8 +287,26 @@ exprJoin ops bottom =
       void op
       return str
 
+exprJoin :: [(String, Parser a)] -> Parser Expr -> Parser Expr
+exprJoin = exprJoinLR fold
+  where
+    fold (e, from) = foldl (fld from) e
+    fld from e (op,e1,to) = Bin op e e1 (SrcSpan from to)
+
+exprJoinR :: [(String, Parser a)] -> Parser Expr -> Parser Expr
+exprJoinR = exprJoinLR fold
+  where
+    fold (e, _) [] = e
+    fold (e', from) es = Bin op e' e (SrcSpan from to)
+      where
+        (op, e, to) = foldr1 fld es
+    fld (op',e',to') (op,e,to) = (op', Bin op e' e (SrcSpan to to'), to)
+
 exprJoin' :: [String] -> Parser Expr -> Parser Expr
-exprJoin' ops bottom = exprJoin (fmap (\s -> (s, string s)) ops) bottom
+exprJoin' ops = exprJoin (fmap (\s -> (s, string s)) ops)
+
+exprJoinR' :: [String] -> Parser Expr -> Parser Expr
+exprJoinR' ops = exprJoinR (fmap (\s -> (s, string s)) ops)
 --
 
 expr :: Parser Expr
@@ -305,7 +322,7 @@ expr14 :: Parser Expr
 expr14 = exprJoin [("incontextof", string "incontextof" >> notFollowedBy identChar)] expr13
 
 expr13 :: Parser Expr
-expr13 = exprJoin' ["=","<->","&=","|=","^=","-=","+=","%=","/=","\\=","*=","||=","&&=",">>=","<<=",">>>="] expr12
+expr13 = exprJoinR' ["=","<->","&=","|=","^=","-=","+=","%=","/=","\\=","*=","||=","&&=",">>=","<<=",">>>="] expr12
 
 expr12 :: Parser Expr
 expr12 =
