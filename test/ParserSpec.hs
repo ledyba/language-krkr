@@ -82,6 +82,7 @@ spec = do
     it "Parse BinOp" $ do
       parse "x *(y);" `shouldBe` Right (Exec (Bin "*" (Ident (Identifer "x") NoSrcSpan) (Ident (Identifer "y") NoSrcSpan) NoSrcSpan) NoSrcSpan)
       parse "x != y;" `shouldBe` Right (Exec (Bin "!=" (Ident (Identifer "x") NoSrcSpan) (Ident (Identifer "y") NoSrcSpan) NoSrcSpan) NoSrcSpan)
+      parse "a = b = c;" `shouldBe` Right (Exec (Bin "=" (Ident (Identifer "a") NoSrcSpan) (Bin "=" (Ident (Identifer "b") NoSrcSpan) (Ident (Identifer "c") NoSrcSpan) NoSrcSpan) NoSrcSpan) NoSrcSpan)
   describe "Parse Statements" $ do
     it "Parse If" $ do
       parse "if (1) x;" `shouldBe` Right (If (Int 1 NoSrcSpan) (Exec (Ident (Identifer "x") NoSrcSpan) NoSrcSpan) Nothing NoSrcSpan)

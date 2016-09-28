@@ -267,16 +267,15 @@ propStmt = withSpan $ do
 -- Expr + Term
 --------------------------------------------------------------------------------
 
-exprJoin :: [(String, Parser a)] -> Parser Expr -> Parser Expr
-exprJoin ops bottom =
+exprJoinLR :: ((Expr,SourcePos) -> [(String, Expr, SourcePos)] -> Expr)-> [(String, Parser a)] -> Parser Expr -> Parser Expr
+exprJoinLR foldE ops bottom =
     do
       from <- getPosition
       e <- bottom
       es <- many (try rep)
       tjspace
-      return (foldl (fld from) e es)
+      return (foldE (e, from) es)
   where
-    fld from e (op,e1,to) = Bin op e e1 (SrcSpan from to)
     rep :: Parser (String, Expr, SourcePos)
     rep = do
       op <- try (tjspace >> choice (fmap sep ops))
@@ -288,8 +287,26 @@ exprJoin ops bottom =
       void op
       return str
 
+exprJoin :: [(String, Parser a)] -> Parser Expr -> Parser Expr
+exprJoin = exprJoinLR fold
+  where
+    fold (e, from) = foldl (fld from) e
+    fld from e (op,e1,to) = Bin op e e1 (SrcSpan from to)
+
+exprJoinR :: [(String, Parser a)] -> Parser Expr -> Parser Expr
+exprJoinR = exprJoinLR fold
+  where
+    fold (e, _) [] = e
+    fold (e', from) es = Bin op e' e (SrcSpan from to)
+      where
+        (op, e, to) = foldr1 fld es
+    fld (op',e',to') (op,e,to) = (op', Bin op e' e (SrcSpan to to'), to)
+
 exprJoin' :: [String] -> Parser Expr -> Parser Expr
-exprJoin' ops bottom = exprJoin (fmap (\s -> (s, string s)) ops) bottom
+exprJoin' ops = exprJoin (fmap (\s -> (s, string s)) ops)
+
+exprJoinR' :: [String] -> Parser Expr -> Parser Expr
+exprJoinR' ops = exprJoinR (fmap (\s -> (s, string s)) ops)
 --
 
 expr :: Parser Expr
@@ -305,7 +322,7 @@ expr14 :: Parser Expr
 expr14 = exprJoin [("incontextof", string "incontextof" >> notFollowedBy identChar)] expr13
 
 expr13 :: Parser Expr
-expr13 = exprJoin' ["=","<->","&=","|=","^=","-=","+=","%=","/=","\\=","*=","||=","&&=",">>=","<<=",">>>="] expr12
+expr13 = exprJoinR' ["=","<->","&=","|=","^=","-=","+=","%=","/=","\\=","*=","||=","&&=",">>=","<<=",">>>="] expr12
 
 expr12 :: Parser Expr
 expr12 =
@@ -376,16 +393,34 @@ expr1 = do
 
 preOp :: Parser Expr
 preOp = do
-          let seps = fmap p ["~","--","++","new","invalidate","delete", "typeof", "#", "$", "&", "*", "isvalid", "!", "+", "-"]
+          let seps = fmap p [
+                ("~", False),
+                ("--", False),
+                ("++", False),
+                ("new", True),
+                ("invalidate", True),
+                ("delete", True),
+                ("typeof", True),
+                ("#", False),
+                ("$", False),
+                ("&", False),
+                ("*", False),
+                ("isvalid", True),
+                ("!", False),
+                ("+", False),
+                ("-", False)]
           ops <- choice seps `sepEndBy` tjspace
           e <- postOp
           to <- getPosition
           return (foldl (\e0 (from, op) -> PreUni op e0 (SrcSpan from to)) e (reverse ops))
         where
-          p :: String -> Parser (SourcePos, String)
-          p s = do
+          p :: (String, Bool) -> Parser (SourcePos, String)
+          p (s,asciiOp) = do
             from <- getPosition
-            void (try (string s))
+            if asciiOp then
+              void (try (string s >> notFollowedBy identChar))
+            else
+              void (try (string s))
             return (from,s)
 
 postOp :: Parser Expr
@@ -399,7 +434,7 @@ postOp = do
     apply :: Parser (Expr -> SrcSpan -> Expr, SourcePos)
     apply = choice [
            do
-            op <- try (choice (exec:fmap (try.string) ["++", "--", "isvalid"]))
+            op <- try (choice (exec:fmap makeP [("++", False), ("--", False), ("isvalid", True)]))
             to <- getPosition
             return ((`PostUni` op), to)
           ,do
@@ -426,6 +461,13 @@ postOp = do
             return ((`Dot` name), to)
         ]
         where
+          makeP :: (String, Bool) -> Parser String
+          makeP (s,asciiOp) = do
+            if asciiOp then
+              void (try (string s >> notFollowedBy identChar))
+            else
+              void (try (string s))
+            return s
           exec :: Parser String
           exec = try $ do
             void (string "!")
